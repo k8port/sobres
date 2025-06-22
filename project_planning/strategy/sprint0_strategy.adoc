@@ -298,8 +298,8 @@ export default function EnvelopesPage() {
 
 === Prior to Sprint Kickoff
 * [*] Push to GitHub
-* [ ] Create new GitHub Project for MVP budget
-* [ ] Create issues, milestones, and labels, and branches
+* [*] Create new GitHub Project for MVP budget
+* [n/a] Create issues, milestones, and labels, and branches
 * [ ] Update workflows for CI/CD and development
 * [ ] Verify `docker-compose up` works
 * [ ] Spin up onboarding endpoint and prototype statement uploads

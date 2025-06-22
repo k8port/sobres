@@ -7,7 +7,6 @@ Usage: python statement_extractor.py --input statement.pdf
 Objective: Turn raw parse into formatted rows of text.
 """
 
-import argparse
 import pdfplumber
 import pandas as pd
 import numpy as np

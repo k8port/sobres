@@ -1,15 +1,19 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
 import tempfile
-import pandas as pd
-from .core.statement_extractor import extract_pdf_content
-from fastapi import HTTPException
 import os
-import numpy as np
+
+from app.db.session import engine, Base
+from app.core.statement_extractor import extract_pdf_content
+from app.api.transactions import router as tx_router
+
 
 #  Minimal FastAPI app configuration for MVP
 app = FastAPI()
+# Create budget.db with tables
+Base.metadata.create_all(bind=engine) 
 
 app.add_middleware(
     CORSMiddleware,
@@ -42,3 +46,5 @@ async def upload_pdf(file: UploadFile = File(...)):
         }
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
+    
+app.include_router(tx_router)
