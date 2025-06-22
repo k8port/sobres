@@ -14,4 +14,10 @@ up:
 .PHONY: run-backend
 
 run-backend:
-	uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+	cd py_backend && python main.py
+
+# database validations
+.PHONY: test
+test:
+	cd py_backend && \
+	PYTHONPATH=. pytest -q
