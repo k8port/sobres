@@ -1,0 +1,178 @@
+= Sobres
+K8 Portalatin <k8@k8port.io>
+:description: MVP strategy for Sobres budget tool for iOS
+:toc:
+:sectanchors:
+:sectnums:
+:icons: font
+:url-repo: https://github.com/k8port/sobres
+:table-caption: Security & Compliance Strategy
+
+> _Sobres_ MVP is a budget tool for iOS that allows users to manage their finances by creating envelopes for different categories of spending, integrating with Plaid for real-time account data, and providing a simple UI for tracking income and expenses. Manual upload of account statements will also be supported.
+
+== Core Domain & Data Model
+[discrete]
+**Model of 5 key entities**::
+[unordered]
+**Account** (_field list_)::
+{empty}
+* `user`
+* `name`
+* `type` (e.g., `+checking+`, `+credit+`)
+* `connection method` (e.g., Plaid, manual)
+* `last-updated` (timestamp)
+
+**Transaction _(field list)_**::
+* `account`
+* `date`
+* `description`
+* `amount`
+* `category`
+
+**Category** (_field list_)::
+* `user`
+* `name` (e.g., Rent, Groceries, etc.)
+* `envelope balance`
+* `historical spend %`
+
+**Envelope (Budget Category)** (_field list_)::
+* `category`
+* `allocated this-period`
+* `spent`
+* `remaining`
+
+**Bill/Reminder** (_field list_)::
+* `payee`
+* `amount`
+* `due date`
+* `repeat schedule`
+* `notification method` (e.g., push, email)
+
+IMPORTANT: PostgreSQL database designed to persist 5 entity tables outlined above.
+Include _clear_ **foreign-key** relationships for straightforward allocation logic, spending rollups, and reminders scheduling.
+
+
+== Transaction Ingestion
+_Strategy for required integrations_ +
+[horizontal]
+**Plaid**:: _Tool providing real-time account/transaction fetches_ +
+[horizontal]
+* Use `Link flow` for UI and `webhooks` to pull transactions
+
+**Statements (upload and parsing)**:: _Manual upload of PDF or CSV account statements_ +
+[horizontal]
+CSV::: hard-coded line-by-line parsing
+PDF::: use library like `pdfplumber` or `tabula-py` to extract text in table format (defer OCR)
+
+**Data & Code Redundancies**::
+_Strategies for avoiding data and code redundancies_ +
+* Normalize dates and amounts
+* Use hash for `date`, `description`, and `amount` to avoid duplication of data
+
+== Transaction Categories & Envelope Allocations
+_Creating categories for transactional expenses + computing allocations for category envelopes_ +
+[horizontal]
+**Historical Analysis**::
+* Compute expense totals per category over previous 12 months.
+* Derive percentage of total expenses for each category.
+**Envelope Algorithm**::
+* Credit transactions (income) allocated into envelopes according to categorically-derived percentages.
+* Essential envelopes (e.g., mortgage, utilities) capped at fixed amount and remainder distributed to flexible categories (e.g., Dining, Fun).
+**Rule-Based Overrides**::
+* User can set explicit rules (e.g., “Always categorize `Stripe` as Income”).
+* Use ML algorithm or simple keyword match for ambiguous cases.
+
+
+== Reminder Engine
+_Scheduling reminders for bills and other recurring expenses_ +
+[horizontal]
+**Bill Model**:: Stores bill due dates and frequencies (e.g., monthly, quarterly, etc.).
+**Scheduler**::
+Keeps backend queue (built using `Celery` + `Redis` or  `Node` + `BullMQ`) of notifications/reminders
+and runs job daily to find bills due over next `x` days and notify user immediately
+**Delivery**::
+[horizontal]
+  *web/PWA*::: `Notifications API` + `service worker`
+  *native iOS*::: push notifications (`APNs`)
+  *emails*::: `SendGrid` or `Mailgun`
+
+== Cross-Device UI Strategy
+_To hit iPhone, iPad, laptop, desktop quickly_ +
+[horizontal,labelwidth=30]
+**Progressive Web App (PWA)**:: Build responsive `React/Next.js` frontend using `TailwindCSS` for install on iOS/Android and desktop
+**Initial Views**:: {empty}
+[horizontal]
+**Dashboard**::: Displays envelopes balances with progress bars
+**Transactions**::: Features transactions list, search bar and a way to manually recategorize
+transactions (using drag and drop and/or dropdown assignment)
+**Upload/Connect**::: A place for user to add accounts using `Plaid` (button) or file uploader
+**Bills**::: A list of bills with upcoming due dates and a way to add or edit (e.g., mark as paid, keep record of payment sent)
+**Authentication & Sync**::
+Uses `JSON Web Tokens` (`JWT`) or `NextAuth` for session security and provides real-time sync using 
+polling or websockets for consistency across multiple tabs and/or devices
+
+== Security & Compliance
+_Don&apos;t skimp on security!_ +
+[cols="1,1,1"]
+|===
+|Secure Method | Context | Data Type
+
+|Encryption
+|at rest
+|sensitive data
+
+|TLS
+|everywhere
+|HTTPS
+
+|PCI/DSS
+|avoid for MVP (use Plaid to handle credentials)
+|credit card info
+
+|Data retention policy
+|easy “delete my data” flow
+|any data
+|===
+
+== Rough Tech Stack
+[horizontal]
+**Backend**:: `Python` (`FastAPI`) or `Node.js` (`NestJS/Express`)
+**Database**:: `PostgreSQL` + `Redis` (for queues & caching)
+**Frontend**:: `Next.js` + `Tailwind CSS` (PWA)
+**Jobs/Notifications**:: `Celery`/`Redis` or `BullMQ`
+**Storage**:: `AWS S3` (uploads)
+**Auth**:: `JWT`/`NextAuth` + `OAuth` for `Plaid`
+**CI/CD**:: `GitHub Actions` → deploy to `Vercel` (frontend) + `Heroku`/`AWS ECS` (backend)
+
+== MVP Development Plan
+[unordered]
+**Week 1**::
+* Scaffold backend + DB schema
+* Simple REST CRUD for accounts, transactions, categories
+* Basic Next.js PWA shell with login
+
+**Week 2**::
+* CSV statement upload & parsing
+* Transaction list + manual categorization UI
+
+**Week 3**::
+* Envelope balances + historical‐based allocation logic
+* Income logging & auto-envelope allocation
+
+**Week 4**::
+   * Bill model + scheduler + simple in-app reminders
+   * Polish PWA installability & responsive layouts
+
+**Week 5+**::
+* Plaid integration
+   * Push notifications, email reminders
+   * OCR for PDF statements (optional)
+
+
+=== Next Steps
+[horizontal]
+**Choose MVP scope**:: statement upload or Plaid...which first?
+**Define minimal set of categories for envelopes**:: demo concept to begin
+**Spin up prototypes**:: use a simple CRUD + CSV import to prove envelope logic
+**Iterate feedback**:: put in front of some power-users to validate workflows
+**Build Sprint Plan**:: carve into bite-sized sprints to ship fast

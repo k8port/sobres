@@ -1,0 +1,27 @@
+# Local dev compose
+
+version: '3.8'
+
+services:
+  web-ui:
+    build:
+      context: ./web-ui
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - py-backend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    volumes:
+      - ./web-ui:/app
+      - /app/node_modules
+
+  py-backend:
+    build:
+      context: ./py-backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./py-backend:/app

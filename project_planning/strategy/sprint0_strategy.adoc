@@ -1,0 +1,305 @@
+= MVP Strategy Alignment
+K8 Portalatin <k8@k8port.io>
+:description: MVP Strategy Alignment Post-Sprint 0
+:icons: font
+:url-repo: https://github.com/k8port/sobres
+:table-caption: MVP
+
+[IMPORTANT]
+====
+**Sprint 0 Objective:** 
+[unoredered]
+* Get working frontend hookend up to working backend
+* Backend scans in and parses pdf bank statements.
+* Frontend allows user to select and upload pdfs and displays parsed data (roughly)
+====
+
+== Current Alignment with MVP
+.Feature Matrix
+[%autowidth]
+|===
+| MVP Need | Current Prototype | Next Action
+
+| **1. Structured transaction model**
+| Raw PDF text → UI lines
+| Enhance `statement_extractor.py` to output `{date, desc, amt}`
+
+| **2. Persisted data & lookup**
+| In-memory pandas only
+| Introduce a lightweight DB (SQLite/Postgres) with a `transactions` table
+
+| **3. Auto-categorization**
+| none
+| Build a simple rule engine (keyword → category) in `core/`
+
+| **4. Envelope balances & allocations**
+| n/a
+| Add a `categories` table + “historical %” logic + allocation job
+
+| **5. Bill due-date model & reminders**
+| n/a
+| Create a `bills` table (payee, amt, due\_date, freq) + scheduler
+
+| **6. Front-end views for each domain**
+| single upload page
+| Scaffold “Transactions”, “Envelopes”, “Bills” pages in Next.js
+
+| **7. Cross-device auth & sync**
+| none
+| Layer in JWT or NextAuth; point frontend at secured REST API
+
+| **8. New User Onboarding**
+| uploaded statements unspecified
+| Onboarding page for New Users with historical statement upload + Envelopes dashboard with values
+|===
+
+== Build on Project Structure
+> Expand directory structure (literally and figuratively):
+
+.Sprint 0 directory structure: (16 directories, 52 files)
+[%collapsible]
+====
+[source,bash]
+----
+/Users/dk8furia/ws-ppp/sobres
+├── docker-compose.yml
+├── Makefile
+├── project_planning
+│   ├── envelopes.adoc
+│   ├── project_setup.adoc
+│   └── strategy
+│       ├── initial_strategy.adoc
+│       └── sprint0_strategy.adoc
+├── py-backend
+│   ├── app
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-310.pyc
+│   │   │   └── main.cpython-310.pyc
+│   │   ├── core
+│   │   │   ├── __pycache__
+│   │   │   │   └── statement_extractor.cpython-310.pyc
+│   │   │   └── statement_extractor.py
+│   │   └── main.py
+│   ├── Dockerfile
+│   └── requirements.txt
+├── README.md
+├── statements
+│   ├── balance_book_grid.png
+│   ├── balance_book.png
+│   ├── bofa
+│   │   └── bofa_june25_.pdf
+│   ├── how_to_balance.adoc
+│   └── tdbank 2024
+│       ├── View PDF Statement_2024-01-07.pdf
+│       ├── View PDF Statement_2024-02-07.pdf
+│       ├── View PDF Statement_2024-03-07.pdf
+│       ├── View PDF Statement_2024-04-07.pdf
+│       ├── View PDF Statement_2024-05-07.pdf
+│       ├── View PDF Statement_2024-06-07.pdf
+│       ├── View PDF Statement_2024-07-07.pdf
+│       ├── View PDF Statement_2024-08-07.pdf
+│       ├── View PDF Statement_2024-09-07.pdf
+│       ├── View PDF Statement_2024-10-07.pdf
+│       ├── View PDF Statement_2024-11-07.pdf
+│       └── View PDF Statement_2024-12-07.pdf
+└── web-ui
+    ├── app
+    │   ├── api
+    │   │   └── upload.ts
+    │   ├── favicon.ico
+    │   ├── globals.css
+    │   ├── layout.tsx
+    │   └── page.tsx
+    ├── debugging
+    │   └── debug.html
+    ├── Dockerfile
+    ├── eslint.config.mjs
+    ├── next-env.d.ts
+    ├── next.config.ts
+    ├── package.json
+    ├── pnpm-lock.yaml
+    ├── pnpm-workspace.yaml
+    ├── postcss.config.mjs
+    ├── public
+    │   ├── file.svg
+    │   ├── globe.svg
+    │   ├── next.svg
+    │   ├── vercel.svg
+    │   └── window.svg
+    ├── README.md
+    └── tsconfig.json
+----
+====
+
+.Post-Sprint 0 directory structure (expanded to 20 directories, 100 files):
+[%collapsible]
+====
+[source,bash]
+----
+/Users/dk8furia/ws-ppp/sobres
+├── docker-compose.yml
+├── Makefile
+├── project_planning
+│   ├── envelopes.adoc
+│   ├── project_setup.adoc
+│   └── strategy
+│       ├── initial_strategy.adoc
+│       └── sprint0_strategy.adoc
+├── py-backend
+│   ├── app
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-310.pyc
+│   │   │   └── main.cpython-310.pyc
+│   │   ├── api
+│   │   │   ├── bills.py
+│   │   │   ├── categories.py
+│   │   │   ├── transactions.py
+│   │   │   └── upload.py
+│   │   ├── core
+│   │   │   ├── __pycache__
+│   │   │   │   └── statement_extractor.cpython-310.pyc
+│   │   │   ├── categorizer.py
+│   │   │   └── statement_extractor.py
+│   │   ├── db
+│   │   │   ├── models.py
+│   │   │   └── session.py
+│   │   ├── main.py
+│   │   └── tasks
+│   │       ├── allocate_envelopes.py
+│   │       └── reminders.py
+│   ├── Dockerfile
+│   └── requirements.txt
+├── README.md
+├── statements
+│   ├── balance_book_grid.png
+│   ├── balance_book.png
+│   ├── bofa
+│   │   └── bofa_june25_.pdf
+│   ├── how_to_balance.adoc
+│   └── tdbank 2024
+│       ├── View PDF Statement_2024-01-07.pdf
+│       ├── View PDF Statement_2024-02-07.pdf
+│       ├── View PDF Statement_2024-03-07.pdf
+│       ├── View PDF Statement_2024-04-07.pdf
+│       ├── View PDF Statement_2024-05-07.pdf
+│       ├── View PDF Statement_2024-06-07.pdf
+│       ├── View PDF Statement_2024-07-07.pdf
+│       ├── View PDF Statement_2024-08-07.pdf
+│       ├── View PDF Statement_2024-09-07.pdf
+│       ├── View PDF Statement_2024-10-07.pdf
+│       ├── View PDF Statement_2024-11-07.pdf
+│       └── View PDF Statement_2024-12-07.pdf
+└── web-ui
+    ├── app
+    │   ├── api
+    │   │   └── upload.ts
+    │   ├── favicon.ico
+    │   ├── globals.css
+    │   ├── layout.tsx
+    │   ├── lib
+    │   │   └── fetcher.ts
+    │   ├── page.tsx
+    │   └── ui
+    │       └── envelopes
+    │           └── page.tsx
+    ├── debugging
+    │   └── debug.html
+    ├── Dockerfile
+    ├── eslint.config.mjs
+    ├── next-env.d.ts
+    ├── next.config.ts
+    ├── package.json
+    ├── pnpm-lock.yaml
+    ├── pnpm-workspace.yaml
+    ├── postcss.config.mjs
+    ├── public
+    │   ├── file.svg
+    │   ├── globe.svg
+    │   ├── next.svg
+    │   ├── vercel.svg
+    │   └── window.svg
+    ├── README.md
+    └── tsconfig.json
+----
+====
+
+== New User Onboarding Flow
+
+=== Backend
+[unordered]
+* Flag for new user: `has_sufficient_history: bool`
+* On `/upload`, conunt distinct months in stored transactions:
+
+====
+[source,python]
+----
+months = set(tx.date.strftime('%Y-%mj') for tx in user_transactions)
+if len(months) >= 12:
+    user.has_sufficient_history = True
+----
+====
+
+=== Frontend
+[unordered]
+* On user's *first* visit or if `has_sufficient_history` is `False`:
+** Redirect to full-screen "Upload Historical Statements" page
+** Display counter or progress bar for months remaining
+** All other app links disabled until sufficient history exists
+* Redirects to main dashboard once uploading is complete and user does not wish to upload more statements
+
+
+== Dashboard UI
+.Next.js Dashboard UI at `/envelopes` (/web-ui/app/envelopes/page.tsx)
+====
+[source,tsx]
+----
+export default function EnvelopesPage() {
+    const { data } = useSWR('/api/envelopes', fetcher);
+    return (
+        <div className="p-6">
+            <h1 className="text-2xl font-bold mb-4">Envelope Balances</h1>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {data.categories.map(cat => (
+                <div key={cat.id} className="p-4 bg-white rounded shadow">
+                <h2 className="font-semibold">{cat.name}</h2>
+                <p>Allocation: {cat.percentage}%</p>
+                <p>Balance: ${cat.balance.toFixed(2)}</p>
+                </div>
+            ))}
+        </div>
+    </div>
+    );
+}
+----
+====
+
+== Sprint Plan
+[horizontal]
+**Sprint 1**:: *Onboarding + Persistence* [.small]#(1 week)#
+* Configure database and tables
+* User upload of historical statements using `count` + `flag`
+* UI redirects to “Historical Statements Upload” and displays progress bar
+* Stores uploaded data into tables as before
+
+**Sprint 2**:: *Transactions List + Categorization* [.small]#(1 week)#
+* Build `/transactions` page, include filter and manual recategorization
+* Implement simple rule-based engine for categories
+
+**Sprint 3**:: *Envelopes Dashboard* [.small]#(1 week)#
+* Compute historical % allocations once `has_sufficient_history` is `True`
+* Persist Category model with percentages and balances
+* Build `/envelopes` page showing % and balance cards
+
+**Sprint 4**:: *Bills & Reminders* [.small]#(1 week)#
+* CRUD bills + scheduler + UI at `/bills`
+* Daily job configured to update dashboard with upcoming due dates
+
+=== Prior to Sprint Kickoff
+* [ ] Push to GitHub
+* [ ] Create new GitHub Project for MVP budget
+* [ ] Create issues, milestones, and labels, and branches
+* [ ] Update workflows for CI/CD and development
+* [ ] Verify `docker-compose up` works
+* [ ] Spin up onboarding endpoint and prototype statement uploads

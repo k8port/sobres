@@ -1,0 +1,127 @@
+= Project Setup Guide
+K8 Portalatin <k8@k8port.io>
+:description: Project setup guide for Python back-end projects
+:toc:
+:sectanchors:
+:sectnums: all
+:icons: font
+
+> Adopt an enterprise&#45;grade approach to Python back-end projects: treat code 
+repo as a long&#45;lived, mission&#45;critical system from day one.
+
+== https://12factor.net/[The Twelve-Factor App]
+[horizontal]
+**Codebase**:: Use a **single repo** per service and strict version control with Git; never mix unrelated services.
+**Dependencies**:: Declare in a lockfile (`poetry.lock` / `requirements.txt` + `requirements-dev.txt`). Isolate via virtual environments (Poetry, pip-env, or venv).
+**Config**:: Store all environment-specific config in environment variables (e.g. 12-FACTOR). Use a library like `python-decouple` or `Dynaconf`. Declare in a lockfile (`poetry.lock` / `requirements.txt` + `requirements-dev.txt`) and isolate via virtual environments (Poetry, pip-env, or venv).
+**Backing Services**:: Treat DBs, caches, queues as attached resources (configured via URLs, no hard-coding).
+**Build, Release, Run**:: Separate build (image build), release (config injection), and run (container startup) stages.
+
+== Project Layout & Packaging
+
+```
+myservice/
+├── src/
+│   └── myservice/          # Your package root
+│       ├── __init__.py
+│       ├── api/            # HTTP handlers (FastAPI/Django apps)
+│       ├── core/           # Business logic
+│       ├── db/             # Models & repositories (SQLAlchemy/Django ORM)
+│       ├── tasks/          # Async task code (Celery/RQ)
+│       └── utils/          # Shared utilities
+├── tests/                  # Unit & integration tests
+│   ├── unit/
+│   └── integration/
+├── Dockerfile              # Container spec
+├── docker-compose.yml      # Local dev compose
+├── pyproject.toml          # Poetry or PEP 518 config
+├── requirements.txt        # If not using Poetry
+├── alembic/                # DB migrations
+├── .github/workflows/ci.yml # CI definitions
+└── README.md
+```
+
+[horizontal]
+**src/ vs. top-level modules**:: keep imports unambiguous
+**tests mirror code**: use same subfolders under `tests/` as is used in `main`
+
+
+== Dependency & Environment Management
+* **Pin exact versions** in a lockfile.
+* **Separate dev/prod** dependencies (`dev-dependencies` in Poetry or `-dev.txt`).
+* **Automate env setup** with `make` (or shell script):
+
+```makefile
+    .PHONY: init test lint
+    init:
+        poetry install
+    test:
+        poetry run pytest --cov=src
+    lint:
+        poetry run flake8 src tests
+```
+**Use Docker** for parity:: define a slim `Dockerfile` that installs only prod deployments.
+
+== Configuration & Secrets
+
+[IMPORTANT]
+.*Top 3 tips for managing secrets*
+====
+. Never check&#45;in secrets
+. Use **Vault**/AWS Secrets Manager/GCP Secret Manager for rotation
+. Inject secrets at runtime (e.g., using `Kubernetes` `Secrets`, CI/CD variables, etc.)
+====
+
+== Database Migrations
+[horizontal]
+Use a 3rd&#45;party tool:: e.g., **Alembic** (SQLAlchemy), **Django migrations**, **Flyway** (multi-DB).
+Store migrations in source control:: Automate migrations in your CI/CD pipeline’s “release” step.
+
+
+== API Framework & Patterns
+* Use **FastAPI** (async-first, auto-docs) or **Django REST Framework** (batteries included).
+* Version your API (`/v1/...`, header negotiation).
+* Use **Pydantic**/serializers for input validation and to clear error messages.
+
+== Async & Background Processing
+* For non-blocking tasks (emails, reports): **Celery** + **Redis/RabbitMQ**, or **RQ**.
+* Keep tasks idempotent and design retry policies.
+* Monitor your broker/worker health.
+
+
+== Testing & Quality Gates
+* **Unit tests** (use `pytest` with fixtures)
+* **Integration tests** (spin up real or ephemeral DB/Redis via Docker)
+* **Static analysis**: `flake8`, `black`, `isort`
+* **Security scans**: `bandit`, `safety`
+* **Coverage threshold**: fail CI if below e.g. 80%
+
+
+== CI/CD Pipelines
+* **Lint → Test → Build → Security Scan → Deploy**.
+* Use **GitHub Actions**, **GitLab CI**, or **Jenkins**.
+* Build immutable artifacts (Docker images) tagged by commit SHA
+* Deploy via **Helm** or **Terraform** in Kubernetes or your cloud’s PaaS
+
+== Observability & Monitoring
+* **Logging**: structured (JSON) logs with correlation IDs; output to stdout for container platforms.
+* **Metrics**: expose Prometheus endpoints (use `prometheus_client`).
+* **Tracing**: integrate OpenTelemetry for request spans
+* **Error tracking**: Sentry or equivalent for uncaught exceptions
+
+== Security Best Practices
+* **OWASP Top 10**: validate inputs, sanitize outputs.
+* **Auth**: OAuth2 / OpenID Connect; rotate JWT secrets
+* **Rate-limiting**: protect against abuse (e.g. via FastAPI middleware)
+* **Dependency hygiene**: automated Dependabot and frequent “safety” scans
+
+== Documentation & Onboarding
+* **README**: quickstart, architecture overview, local setup.
+* **Docs folder**: detailed design docs, API specs (OpenAPI/Swagger)
+* **ADR (Architecture Decision Records)**: record why you chose FastAPI vs. Django, Celery vs. RQ, etc.
+* **Developer onboarding script**: automate everything from `git clone` to “hello world” endpoint
+
+== Git Workflow & Release Management
+* **Feature branches → PRs → code review → merge to main**
+* Protect `main` with required status checks
+* **Semantic versioning** and changelog (keep a `CHANGELOG.md`)
