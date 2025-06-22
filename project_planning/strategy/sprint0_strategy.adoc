@@ -297,7 +297,7 @@ export default function EnvelopesPage() {
 * Daily job configured to update dashboard with upcoming due dates
 
 === Prior to Sprint Kickoff
-* [ ] Push to GitHub
+* [*] Push to GitHub
 * [ ] Create new GitHub Project for MVP budget
 * [ ] Create issues, milestones, and labels, and branches
 * [ ] Update workflows for CI/CD and development
