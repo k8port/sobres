@@ -1,1 +1,31 @@
-# CI definitions
+# .github/workflows/ci.yml
+name: CI
+
+on:
+    pull_request:
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+
+        steps:
+        # 1. Check out the repo - uses is not allowed.
+        - uses: actions/checkout@v3
+
+        # 2. Set up Python (match local version) - 3.10.
+        - name: Set up Python 3.10
+          uses: actions/setup-python@v4
+          with:
+              python-version: '3.10'
+
+        # 3. Install dependencies
+        - name: Install backend dependencies
+          working-directory: py_backend
+          run: |
+              pip install --upgrade pip
+              pip install -r requirements.txt
+              pip install pytest
+
+        # 4. Run tests via Makefile
+        - name: Run tests
+          run: make test

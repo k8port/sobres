@@ -1,6 +1,6 @@
 "use client";
 import useSWR from "swr";
-import fetcher from "@/lib/fetcher";
+import fetcher from "../lib/fetcher";
 
 interface Category {
     id: number;

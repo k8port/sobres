@@ -8,7 +8,7 @@ K8 Portalatin <k8@k8port.io>
 [IMPORTANT]
 ====
 **Sprint 0 Objective:** 
-[unoredered]
+[unordered]
 * Get working frontend hookend up to working backend
 * Backend scans in and parses pdf bank statements.
 * Frontend allows user to select and upload pdfs and displays parsed data (roughly)
@@ -300,6 +300,6 @@ export default function EnvelopesPage() {
 * [*] Push to GitHub
 * [*] Create new GitHub Project for MVP budget
 * [n/a] Create issues, milestones, and labels, and branches
-* [ ] Update workflows for CI/CD and development
-* [ ] Verify `docker-compose up` works
+* [*] Update workflows for CI/CD and development
+* [*] Verify `docker-compose up` works
 * [ ] Spin up onboarding endpoint and prototype statement uploads
