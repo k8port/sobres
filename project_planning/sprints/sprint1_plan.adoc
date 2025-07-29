@@ -1,0 +1,46 @@
+= Sprint 1: Onboarding & Persistence
+
+== Sprint Plan
+
+> **Goal:** Persist uploads and enforce historical-data onboarding.
+
+.User Stories
+****
+[horizontal,labelwidth=30,itemwidth=70]
+**Persistence**:: Upload PDF save for each parsed `{date,description,amount,payee}` row in `transactions`.
+**Onboarding Status**:: User can see how many distinct months have been uploaded
+**Enforced Onboarding**:: Until ≥12 months are loaded, user is gated on a full-screen upload flow.
+****
+
+.Backend Tasks
+****
+. Define `Transaction` model and `transactions` table; ensure `Base.metadata.create_all()` runs on startup.
+. Update `/api/upload` to bulk-insert parsed rows into SQLite via SQLAlchemy.
+. Add `has_sufficient_history` flag on the user (simple boolean column or in-memory store).
+. Build `/api/status` endpoint:
++
+[source,json]
+```
+{
+    "monthsLoaded": <int>,
+    "hasHistory": <bool>
+}
+```
++
+. Write unit tests for upload → DB and `/api/status`.
+****
+
+.Frontend Tasks
+****
+1. Scaffold `/onboarding` page in Next.js.
+2. SWR-fetch `/api/status` and render progress (e.g. “8 of 12 months loaded”).
+3. Wire upload form into this page (FormData key `statement`).
+4. Redirect all routes to `/onboarding` if `hasHistory===false`.
+5. Write simple component tests (Jest/React Testing Library).
+****
+
+== Acceptance Criteria
+* Uploads persist in `transactions`.
+* `/api/status` accurately reflects loaded months.
+* New users cannot access any other page until `hasHistory===true`.
+* Onboarding page shows a working progress bar and upload button.

@@ -1,0 +1,17 @@
+.
+├── __init__.py
+├── integration
+│   ├── conftest.py
+│   └── test_api
+│       ├── test_transactions.py
+│       └── test_upload.py
+├── project-tree.txt
+├── requirements.txt
+├── test_models.py
+└── unit
+    └── test_core
+        ├── __init__.py
+        ├── test_statement_extractor.py
+        └── test_transaction_parser.py
+
+5 directories, 10 files

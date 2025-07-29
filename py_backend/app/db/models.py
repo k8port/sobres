@@ -25,39 +25,43 @@ def get_category_name(category_id):
     return CategoryEnum(category_id).name
 
 class Transaction(Base):
-    __tablename__ = "transactions"
+    __tablename__ = "transaction"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     date = Column(Date, index=True, nullable=False)
     description = Column(String, index=True, nullable=False)
     amount = Column(Float, nullable=False)
-    category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
+    payee = Column(String, nullable=True)
+    category = Column(String, nullable=True)
+    subcategory = Column(String, nullable=True)
+    notes = Column(String, nullable=True)
+    category_id = Column(Integer, ForeignKey("category.id"), nullable=True)
 
 class Category(Base):
-    __tablename__ = "categories"
+    __tablename__ = "category"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String, index=True, nullable=False)
     description = Column(String, nullable=False)
     allocation_percentage = Column(Float, default=0.0)
     kind = Column(SQLEnum(CategoryEnum), nullable=False)
-    envelopes = relationship("Envelope", back_populates="category")
+    envelope = relationship("Envelope", back_populates="category")
 
 
 class Bill(Base):
-    __tablename__ = "bills"
+    __tablename__ = "bill"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     payee = Column(String, index=True, nullable=False)
     amount = Column(Float, nullable=False)
     due_date = Column(Date, nullable=False)
     frequency = Column(String, nullable=False)
 
 class Envelope(Base):
-    __tablename__ = "envelopes"
+    __tablename__ = "envelope"
 
-    id = Column(Integer, primary_key=True, index=True)
-    category_id = Column(Integer, ForeignKey("categories.id"), nullable=False)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    category_id = Column(Integer, ForeignKey("category.id"), nullable=False)
     balance = Column(Float, default=0.0)
 
-    category = relationship("Category", back_populates="envelopes")
+    category = relationship("Category", back_populates="envelope")

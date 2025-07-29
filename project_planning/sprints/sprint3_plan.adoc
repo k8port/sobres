@@ -1,0 +1,49 @@
+= Sprint 3: Envelopes Dashboard
+
+== Sprint Plan
+> **Goal:** Compute and display envelope allocations and balances.
+
+.User Stories
+****
+[horizontal,labelwidth=30,itemwidth=70]
+**Historical Allocation**:: Once 12 months are loaded, compute each category&apos;s % of total spend.
+**Envelope Balances**:: Display how much has been allocated, spent, and remains per envelope.
+**Dashboard View**:: I can see all my envelopes with % and \$ balance.
+****
+
+.Backend Tasks
+****
+. Extend `Category` model with `percentage` and `balance` fields.
+. Create `Envelope` model/table (category\_id, allocated, spent, remaining).
+. Build `tasks/allocate_envelopes.py`:
+
+   * On demand or via endpoint, sum last 12 months spend, update each category&apos;s `%`.
+   * Allocate *incoming* income transactions into envelopes accordingly.
+. Add `GET /api/envelopes` endpoint returning:
++
+[source,json]
+```
+{
+    "categories":[
+        { "id":1, "name":"Groceries", "percentage":12.5, "balance": 350.00 },
+        ...
+    ]
+}
+```
++
+. Write unit tests for allocation logic.
+****
+
+.Frontend Tasks
+****
+. Scaffold `/envelopes` page (or `/dashboard`) in Next.js.
+. Fetch `/api/envelopes` and render cards (name, `%`, balance).
+. Add a “Recalculate” button to trigger allocation (optional).
+. Style cards responsively with Tailwind.
+. Add component tests for envelope cards.
+****
+
+== Acceptance Criteria
+* `/api/envelopes` returns correct historical percentages.
+* Frontend shows a card grid reflecting those values.
+* Envelope balances update after recalculation.

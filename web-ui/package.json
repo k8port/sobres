@@ -17,14 +17,17 @@
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/formidable": "^3.4.5",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/testing-library__react": "^10.2.0",
     "eslint": "^9",
     "eslint-config-next": "15.3.4",
     "formidable": "^3.5.4",
     "swr": "^2.3.3",
     "tailwindcss": "^4",
+    "ts-jest": "^29.4.0",
     "typescript": "^5"
   }
 }

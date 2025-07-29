@@ -1,0 +1,40 @@
+= Sprint 4: Bills & Reminders
+
+== Sprint Plan
+> **Goal:** Model recurring bills and surface upcoming due-date reminders.
+
+.User Stories
+****
+[horizontal,labelwidth=30,itemwidth=70]
+**CRUD Bills**:: I can add/edit/delete bills with payee, amount, due date, frequency.
+**Upcoming Reminders**:: I can see bills due in the next X days on my dashboard.
+**Notifications**:: The system flags upcoming due dates daily.
+****
+
+.Backend Tasks
+****
+. Create `Bill` model/table (payee, amount, due\_date, frequency).
+. Add CRUD endpoints under `/api/bills` (GET, POST, PUT, DELETE).
+. Build `tasks/reminders.py`:
+   * Daily job that scans for bills due in the next 7 days.
+   * Store or return a list of upcoming reminders.
+. Expose `GET /api/bills/upcoming?days=7`.
+. Write tests for bill CRUD and reminder logic.
+****
+
+.Frontend Tasks
+****
+1. Scaffold `/bills` page in Next.js: list existing bills, “Add Bill” form.
+2. Use SWR to fetch `/api/bills` and `/api/bills/upcoming`.
+3. Display upcoming reminders on the dashboard or a bell icon.
+4. Implement forms to create/edit bills; call POST/PUT/DELETE.
+5. Add UI tests for bill CRUD and reminders.
+****
+
+== Acceptance Criteria
+* Bills can be added/edited/deleted via UI and persist to DB.
+* Dashboard shows upcoming bills (e.g. “Rent due in 3 days”).
+* Daily reminder logic correctly identifies upcoming due dates.
+
+== Conclusion
+**Once Sprint 4 is done**, you&apos;ll have a full MVP: historical onboarding, transaction persistence, categorization, envelope budgeting, and basic bill reminders—ready for user testing and feedback!
