@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
         console.log('Forwarding to backend:', `http://localhost:8000/api/upload/`);
 
         // Forward the request to the FastAPI backend
-        const response = await fetch('http://localhost:8000/api/upload/', {
+        const response = await fetch('http://localhost:8000/api/upload', {
             method: 'POST',
             body: backendFormData,
         });
@@ -48,25 +48,6 @@ export async function POST(request: NextRequest) {
         console.error('Error uploading file:', error);
         return NextResponse.json(
             { error: 'Failed to upload file' },
-            { status: 500 }
-        );
-    }
-}
-
-export async function GET(request: NextRequest) {
-    try {
-        const response = await fetch('http://localhost:8000/api/transactions', {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-        });
-
-        // Get response from backend
-        const data = await response.json();
-        return NextResponse.json(data, { status: response.status });
-    } catch (error) {
-        console.error('Error fetching transactions:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch transactions' },
             { status: 500 }
         );
     }

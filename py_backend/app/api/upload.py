@@ -40,21 +40,21 @@ async def upload_statement(
         logger.error(f"Invalid content type: {statement.content_type}")
         raise HTTPException(status_code=400, detail="File must be a PDF")
 
-    return {"message": "Upload successful"} 
     try:
         # Read the file content
-        logger.info("Reading file content")
+        # logger.info("Reading file content")
         contents = await statement.read()
+        # logger.info(f"Read {len(contents)} bytes")
         
         # Save to a temporary file to ensure proper handling
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
             tmp.write(contents)
             tmp_path = tmp.name
-            logger.info(f"Saved to temporary file: {tmp_path}")
+            # logger.info(f"Saved to temporary file: {tmp_path}")
         
         try:
             # Extract content using statement_extractor
-            logger.info("Extracting content from PDF")
+            # logger.info("Extracting content from PDF")
             with open(tmp_path, "rb") as f:
                 pdf_bytes = f.read()
                 extracted_data = extract_pdf_content(pdf_bytes)

@@ -28,7 +28,7 @@ def extract_pdf_content(pdf_bytes: bytes) -> Dict[str, Any]:
     Returns:
         A dictionary with 'text' and 'tables' keys
     """
-    # logger.info(f"Starting PDF extraction, received {len(pdf_bytes)} bytes")
+    logger.info(f"Starting PDF extraction, received {len(pdf_bytes)} bytes")
     all_tables = []
     all_text = []
 
@@ -53,6 +53,10 @@ def extract_pdf_content(pdf_bytes: bytes) -> Dict[str, Any]:
                 # logger.info(f"Found {len(tables)} tables on page {i}")
                 
                 for table_idx, table in enumerate(tables):
+                    if not table:
+                        logger.warning(f"Empty table found on page {i}, table #{table_idx+1}")
+                        continue
+
                     # First row as header, rest as data
                     if len(table) < 2:
                         logger.warning(f"Table on page {i}, table #{table_idx+1} has insufficient rows (needs header + data)")
@@ -64,6 +68,7 @@ def extract_pdf_content(pdf_bytes: bytes) -> Dict[str, Any]:
                         continue
                         
                     # Make sure all rows have the same number of columns as the header
+                    # logger.info(f"Table on page {i}, table #{table_idx+1} has {len(header)} columns and {len(rows)} data rows")
                     
                     # Fix rows that don't match header length
                     fixed_rows = []
@@ -106,4 +111,4 @@ def extract_pdf_content(pdf_bytes: bytes) -> Dict[str, Any]:
         return {
             "text": "",
             "tables": pd.DataFrame(),
-        } 
+        }

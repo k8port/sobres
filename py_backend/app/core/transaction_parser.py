@@ -15,6 +15,9 @@ def get_statement_rows(text: str) -> List[Dict[str, str]]:
     """
     Extracts row data from statement text
     """
+    logger.info("Getting statement rows, {len(text)}")
+    if not text:
+        return []
     
     # extract rows for deposits, credits, and transactions
     lines = text.splitlines()
@@ -74,6 +77,7 @@ def get_transactions(rows_raw: List[Dict[str, str]]) -> List[Dict[str, Any]]:
         - `description`: str
         - `amount`: float (debits negative, credits positive)
     """
+    logger.info(f"getting transactions, {len(rows_raw)}")
     transactions = []
     for row in rows_raw:
         # adjust keys to match bank statement format
@@ -90,34 +94,40 @@ def get_transactions(rows_raw: List[Dict[str, str]]) -> List[Dict[str, Any]]:
             'payee': payee_str,
             'category': category_str,
         } 
-        try:
-            # Try different date formats
+        if not transaction['date'] or not transaction['description'] or not transaction['amount']:
             try:
-                date_mod = datetime.strptime(date_str.strip(), "%m/%d/%Y").date()
-                transaction['date'] = date_mod
-            except ValueError:
+                # Try different date formats
                 try:
-                    date_mod = datetime.strptime(date_str.strip(), "%m/%d").date().replace(year=datetime.now().year)
+                    date_mod = datetime.strptime(date_str.strip(), "%m/%d/%Y").date()
                     transaction['date'] = date_mod
+                    logger.info('date modified from', date_str, 'to', date_mod)
                 except ValueError:
-                    logger.error('Invalid date', date_str)
-                    continue
-        except Exception as e:
-            logger.error('Invalid date', date_str, e)
-            continue
+                    try:
+                        date_mod = datetime.strptime(date_str.strip(), "%m/%d").date().replace(year=datetime.now().year)
+                        transaction['date'] = date_mod
+                        logger.info('date modified from', date_str, 'to', date_mod)
+                    except ValueError:
+                        logger.error('Invalid date', date_str, e)
+                        continue
+            except Exception as e:
+                logger.error('Invalid date', date_str, e)
+                continue
             
-        transaction['amount'] = amt_str.replace("$", "").replace(",", "").strip()
-        if "(" in transaction['amount'] and ")" in transaction['amount']:
-            transaction['amount'] = "-" + transaction['amount'].replace("(", "").replace(")", "")
-        try:
-            transaction['amount'] = float(transaction['amount'])
-        except ValueError:
-            logger.error('Invalid amount', transaction['amount'])
-            continue
+            transaction['amount'] = amt_str.replace("$", "").replace(",", "").strip()
+            logger.info('amount normalized from', amt_str, 'to', transaction['amount'])
+            if "(" in transaction['amount'] and ")" in transaction['amount']:
+                transaction['amount'] = "-" + transaction['amount'].replace("(", "").replace(")", "")
+                logger.info('amount modified from', transaction['amount'], 'to', transaction['amount'])
+            try:
+                transaction['amount'] = float(transaction['amount'])
+                logger.info('amount converted to float', transaction['amount'])
+            except ValueError:
+                logger.error('Invalid amount', transaction['amount'])
+                continue
 
-        if transaction['category'] == None:
-            transaction['category'] = ''
-        if transaction['payee'] == None:
-            transaction['payee'] = ''
-    transactions.append(transaction)
+            if transaction['category'] == None:
+                transaction['category'] = ''
+            if transaction['payee'] == None:
+                transaction['payee'] = ''
+        transactions.append(transaction)
     return transactions
