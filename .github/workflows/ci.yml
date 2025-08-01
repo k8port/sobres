@@ -1,0 +1,30 @@
+# .github/workflows/ci.yml
+jobs:
+    unit:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+        - uses: pnpm/action-setup@v3
+          with: { version: 9 }
+        - run: pnpm install --frozen-lockfile
+        - run: pnpm vitest --mode unit --run
+  
+    integration:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+        - uses: pnpm/action-setup@v3
+          with: { version: 9 }
+        - run: pnpm install --frozen-lockfile
+        - run: pnpm vitest --mode integration --run
+  
+    e2e:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+        - uses: pnpm/action-setup@v3
+          with: { version: 9 }
+        - run: pnpm install --frozen-lockfile
+        - run: pnpm dlx playwright install --with-deps
+        - run: pnpm build && pnpm start & pnpm playwright test
+  

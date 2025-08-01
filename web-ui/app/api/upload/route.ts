@@ -52,22 +52,3 @@ export async function POST(request: NextRequest) {
         );
     }
 }
-
-export async function GET(request: NextRequest) {
-    try {
-        const response = await fetch('http://localhost:8000/api/transactions', {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-        });
-
-        // Get response from backend
-        const data = await response.json();
-        return NextResponse.json(data, { status: response.status });
-    } catch (error) {
-        console.error('Error fetching transactions:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch transactions' },
-            { status: 500 }
-        );
-    }
-}
