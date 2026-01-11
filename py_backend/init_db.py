@@ -1,19 +1,20 @@
 # py_backend/init_db.py
 
-from sqlalchemy import inspect
+import os
 from app.db.session import Base, engine
-# Import your models so they get registered on Base.metadata
-import app.db.models  
+from app.db.models import Transaction, Category, Bill, Envelope, CategoryEnum
 
-def main():
-    # Create or Update SQLite file (dev.db) and tables defined in models
+def init_db():
+    Base.metadata.drop_all(bind=engine)
+
+    # Create all tables
     Base.metadata.create_all(bind=engine)
 
-    # Inspect db to list actual tables
-    inspector = inspect(engine)
-    tables = inspector.get_table_names()
-
-    print(f"✅ dev.db created/validated with tables: {tables}")
 
 if __name__ == "__main__":
-    main()
+    db_path = "budget.db"
+    if os.path.exists(db_path):
+        os.remove(db_path)
+        print(f"Removed existing database: {db_path}")
+    
+    init_db()

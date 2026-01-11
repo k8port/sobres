@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+@theme {
+    --color-rosewhite: oklch(0.9889 0.0053 17.25);
+    --color-greekvilla: oklch(0.9428 0.0076 61.45);
+    --color-antiquewhite: oklch(0.9467 0.0311 75.22);
+    --color-albescentwhite: oklch(0.9124 0.0354 65.98);
+    --color-lightcopperorange: oklch(0.8691 0.0745 66.58);
+    --color-mintgreen: oklch(0.9035 0.1624 144.09);
+    --color-screamingreen: oklch(0.8943 0.2119 144.06);
+    --color-yellowjasmine: oklch(0.9327 0.2269 122.43);
+    --color-goldengoose: oklch(0.7351 0.1436 79.18);
+    --color-cambridgeblue: oklch(0.7829 0.043 156.1);
+    --color-chlorine: oklch(0.7192 0.1631 240.08);
+    --color-robineggblue: oklch(0.7653 0.1306 194.77);
+    --color-duckblue: oklch(0.5266 0.0959 220.11);
+    --color-polynesianblue: oklch(0.4313 0.1333 261.11);
+    --color-cerulean: oklch(0.4772 0.1759 264.93);
+    --color-turkishblue: oklch(0.6344 0.0741 209.54);
+    --color-aquamarine: oklch(0.7897 0.0959 216.31);
+    --color-savoyblue: oklch(0.5375 0.1737 271.04);
+    --color-nonphotoblue: oklch(0.8638 0.0622 216.97);
+    --color-pacificblue: oklch(0.6803 0.1178 218.59);
+    --color-arcticblue: oklch(0.9207 0.0445 223.72);
+    --color-crayolablue: oklch(0.5953 0.2192 260.07);
+    --color-ice: oklch(0.9207 0.0445 223.72);
+    --color-lake: oklch(0.7897 0.0959 216.31);
+    --color-pollen: oklch(0.9327 0.2269 122.43);
+    --color-menthol: oklch(0.9035 0.1624 144.09);
+    --color-rust: oklch(0.7351 0.1436 79.18);
+    --color-dawn: oklch(0.8691 0.0745 66.58);
+    --color-halfnhalf: oklch(0.99 0.0351 107.02);
+    --color-lightyellow: oklch(0.99 0.0402 107.11);
+    --color-pomelowhite: oklch(0.99 0.037 116.91);
+    --color-marengo: oklch(0.46 0.0275 252.4);
+}
+
+@theme {
+    --font-lobster: var(--font-lobster);
+    --font-slackey: var(--font-slackey);
+    --font-opensans: var(--font-open-sans);
+    --font-inter: var(--font-inter);
+
+    --gradient: linear-gradient(
+        to bottom,
+        #1f75fe,
+        #0cafff
+    );
+}
+
+
+@layer base {
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        box-sizing: border-box;
+        border: 0 solid var(--color-brand-primary);
+    }
+
+}

@@ -1,0 +1,37 @@
+= Sprint 2: Transactions List & Categorization
+
+== Sprint Plan
+
+> **Goal:** Enable users to view, filter, and recategorize their transactions.
+
+.User Stories
+****
+[horizontal,labelwidth=30,itemwidth=70]
+**View Transactions**:: As a user, I can see a paginated list of my transactions.
+**Manual Recategorization**:: I can change the category of any transaction.
+**Auto-Categorization (Rule Engine)**:: New uploads get an initial category via keyword rules.
+****
+
+.Backend Tasks
+****
+. Create `Category` model/table (id, name, \[optional] keyword rules).
+. Implement simple `categorizer.py` rule engine: map description → `category_id`.
+. Add `GET /api/transactions?skip=&limit=&category=` endpoint (pagination + filter).
+. Add `PATCH /api/transactions/{id}` to update `category_id`.
+. On upload, invoke rule engine before persistence.
+. Add integration tests for listing & recategorization.
+****
+
+.Frontend Tasks
+****
+. Scaffold `/transactions` page: table with Date, Description, Amount, Category columns.
+. Use SWR to fetch `/api/transactions`; implement pagination or infinite scroll.
+. Render category dropdown in each row; on change, call `PATCH /api/transactions/{id}`.
+. Show a “Categorizing…” indicator on upload (optional).
+. Write UI tests for transactions page and recategorization flow.
+****
+
+== Acceptance Criteria
+* Transactions table displays uploads, with correct pagination.
+* Changing a category in the UI persists to the backend.
+* Newly uploaded rows auto-assigned by keyword rules.

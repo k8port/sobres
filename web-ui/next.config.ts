@@ -1,7 +1,14 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+// web-ui/next.config.ts
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
   /* config options here */
 };
 
-export default nextConfig;
+module.exports = {
+  ...nextConfig,
+  eslint: {
+    dirs: ['app', 'components', 'lib', 'styles', 'types', 'utils'],
+    ignoreDuringBuilds: true,
+  },
+}

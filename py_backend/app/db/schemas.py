@@ -8,7 +8,7 @@ Pydantic models are also used to generate the OpenAPI schema for the API.
 Pydantic models are also used to generate the SQLAlchemy models for the database.
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import date
 
@@ -16,6 +16,10 @@ class TransactionBase(BaseModel):
     date: date
     description: str
     amount: float
+    payee: Optional[str] = None
+    category: Optional[str] = None
+    subcategory: Optional[str] = None
+    notes: Optional[str] = None
     category_id: Optional[int] = None
 
 class TransactionCreate(TransactionBase):
@@ -27,8 +31,7 @@ class TransactionUpdate(TransactionBase):
 class Transaction(TransactionBase):
     id: int
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class CategoryBase(BaseModel):
     name: str
@@ -41,8 +44,7 @@ class CategoryCreate(CategoryBase):
 class Category(CategoryBase):
     id: int
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class BillBase(BaseModel):
     payee: str
@@ -56,8 +58,7 @@ class BillCreate(BillBase):
 class Bill(BillBase):
     id: int
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class EnvelopeBase(BaseModel):
     name: str

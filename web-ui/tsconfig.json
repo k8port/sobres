@@ -1,29 +1,31 @@
 {
-  "compilerOptions": {
-    "baseUrl": "app/",
-    "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": ["./*"]
-    }
-  },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+    "compilerOptions": {
+        "baseUrl": "./",
+        "target": "ES2017",
+        "lib": ["dom", "dom.iterable", "esnext"],
+        "allowJs": true,
+        "skipLibCheck": true,
+        "strict": true,
+        "noEmit": true,
+        // NOTE: When upgrading to TypeScript 6, add "ignoreDeprecations": "6.0" to silence baseUrl deprecation.
+        "esModuleInterop": true,
+        "forceConsistentCasingInFileNames": true,
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "jsx": "preserve",
+        "incremental": true,
+        "plugins": [
+            {
+                "name": "next"
+            }
+        ],
+        "paths": {
+            "@/*": ["./*"],
+            "@/app/*": ["app/*"]
+        }
+    },
+    "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+    "exclude": ["node_modules"]
 }
