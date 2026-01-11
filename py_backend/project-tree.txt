@@ -1,0 +1,48 @@
+.
+├── app
+│   ├── __init__.py
+│   ├── api
+│   │   ├── bills.py
+│   │   ├── categories.py
+│   │   ├── envelopes.py
+│   │   ├── transactions.py
+│   │   └── upload.py
+│   ├── core
+│   │   ├── categorizer.py
+│   │   ├── statement_extractor.py
+│   │   └── transaction_parser.py
+│   ├── db
+│   │   ├── models.py
+│   │   ├── schemas.py
+│   │   └── session.py
+│   ├── main.py
+│   └── tasks
+│       ├── allocate_envelopes.py
+│       └── reminders.py
+├── budget.db
+├── dev.db
+├── Dockerfile
+├── get-pip.p
+├── init_db.py
+├── main.py
+├── project-tree.txt
+├── pytest.ini
+├── requirements.txt
+├── test.pdf
+└── tests
+    ├── __init__.py
+    ├── conftest.py
+    ├── integration
+    │   └── test_api
+    │       └── test_transactions.py
+    ├── project-tree.txt
+    ├── README.md
+    ├── requirements.txt
+    ├── test_models.py
+    └── unit
+        └── test_core
+            ├── __init__.py
+            ├── test_statement_extractor.py
+            └── test_transaction_parser.py
+
+11 directories, 35 files

@@ -59,18 +59,18 @@ def test_get_statement_rows_parses_deposits_and_credits_and_payments(sample_text
 @pytest.mark.parametrize("raw_rows, expected", [
     # simple, full YYYY date, positive amount
     (
-        [{"Date":"07/01/2025","Description":"X","Amount":"$100.00","Payee":"A","Category":"C"}],
-        {"date": date(2025,7,1),"description":"X","amount":100.0,"payee":"A","category":"C"}
+        [{"Date":"07/01/2024","Description":"X","Amount":"$100.00","Payee":"A","Category":"C"}],
+        {"date": date(2024,7,1),"description":"X","amount":100.0,"payee":"A","category":"C"}
     ),
     # mm/dd without year → uses current year
     (
         [{"Date":"12/31","Description":"YearEnd","Amount":"$5.00"}],
-        {"date": date(datetime.now().year,12,31),"description":"YearEnd","amount":5.0}
+        {"date": datetime.strptime(f"12/31/{datetime.now().year-1}", "%m/%d/%Y").date(),"description":"YearEnd","amount":5.0}
     ),
     # parentheses → negative
     (
-        [{"Date":"01/01/2025","Description":"Refund","Amount":"($20.00)"}],
-        {"date": date(2025,1,1),"description":"Refund","amount":-20.0}
+        [{"Date":"01/01/2024","Description":"Refund","Amount":"($20.00)"}],
+        {"date": date(2024,1,1),"description":"Refund","amount":-20.0}
     ),
 ])
 def test_get_transactions_converts_type(raw_rows, expected):

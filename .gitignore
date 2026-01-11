@@ -127,3 +127,4 @@ public/*.svg        # adjust if you have other generated assets
 ${sobres}/
 ${workspaceFoder}/
 py_backend/project_tree.txt
+public/statements/

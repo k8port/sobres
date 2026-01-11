@@ -1,6 +1,33 @@
-import '@testing-library/jest-dom';
-import { server } from './app/__tests__/test-utils/msw/server';
+import { resetInterceptors } from './__tests__/test-utils/msw/server';
+import { beforeAll, afterEach, afterAll, vi } from 'vitest';
+import { cleanup } from '@testing-library/react';
+import { setupServer } from 'msw/node';
+import { handlers } from './__tests__/test-utils/msw/handlers';
+
+(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+export const server = setupServer(...handlers);
+
+// minimal File polyfill for Node test envs
+if (typeof File === 'undefined') {
+    class NodeFile extends Blob {
+        name: string;
+        lastModified: number;
+        constructor(chunks: any[], name: string, options: any = {}) {
+            super(chunks as any, options);
+            this.name = String(name);
+            this.lastModified = typeof options?.lastModified === 'number'
+                ? options.lastModified
+                : Date.now();
+        }
+    }
+    (globalThis as any).File = NodeFile as any;
+}
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+    cleanup(); // <-- critical
+    vi.restoreAllMocks(); // <-- prevents fetch spies leakage
+    server.resetHandlers();
+    resetInterceptors();
+});
 afterAll(() => server.close());

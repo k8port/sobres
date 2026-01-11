@@ -13,8 +13,11 @@ up:
 # Backend
 .PHONY: run-backend
 
-run-backend:
-	cd py_backend && python main.py
+run-backend-local:
+	source ~/venvs/sobres/bin/activate && cd py_backend && python main.py
+
+run-backend-docker:
+	docker-compose up py_backend
 
 # database validations
 .PHONY: test

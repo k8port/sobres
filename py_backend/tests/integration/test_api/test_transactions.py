@@ -17,7 +17,7 @@ def test_transactions_lifecycle(client):
     # prepare test transactions
     payload = [
         {
-            "date": "2025-01-01",
+            "date": "2024-01-01",
             "description": "Test Transaction 1",
             "amount": 100.0,
             "payee": "Alice",
@@ -27,7 +27,7 @@ def test_transactions_lifecycle(client):
             "category_id": 1,
         },
         {
-            "date": "2025-01-02",
+            "date": "2024-01-02",
             "description": "Test Transaction 2",
             "amount": -50.0,
             "payee": "",
@@ -38,24 +38,25 @@ def test_transactions_lifecycle(client):
         },
     ]
 
-    # call endpoint POST /api/transactions
     response = client.post("/api/transactions", json=payload)
     assert response.status_code == 200
-
+    assert response.json() == {'count': 2}
+    
+    response = client.get("/api/transactions")
     data = response.json()
     assert isinstance(data, list)
-    assert len(data) == len(payload)
+    assert len(data) == 2
+    assert data[1]["date"] == "2024-01-01"
+    assert data[0]["date"] == "2024-01-02"
 
-    # verify each item contains auto-generated id
-    for idx, tx in enumerate(data):
-        assert "id" in tx
-        assert tx["description"] == payload[idx]["description"]
-        assert tx["amount"] == payload[idx]["amount"]
+    assert data[1]["amount"] == 100.0
+    assert data[0]["amount"] == -50.0
 
-    # verify items are in database
-    from app.db.session import SessionLocal
-    db = SessionLocal()
-    db_items = db.query(Transaction).order_by(Transaction.id).all()
-    db.close()
+def test_save_transactions_empty_returns_zero(client):
+    response = client.post("/api/transactions", json=[])
+    assert response.status_code == 200
+    assert response.json() == {'count': 0}
 
-    assert len(db_items) == 2
+def test_save_transactions_bad_payload_returns_422(client):
+    response = client.post("/api/transactions", json={"not": "a list"})
+    assert response.status_code in (422, 400)

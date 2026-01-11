@@ -1,0 +1,114 @@
+.
+├── __tests__
+│   ├── e2e
+│   │   └── upload-flow.spec.ts
+│   ├── integration
+│   │   ├── api-upload.integration.spec.ts
+│   │   ├── onboarding-flow.integration.spec.tsx
+│   │   └── page-upload.integration.spec.tsx
+│   ├── test-utils
+│   │   ├── msw
+│   │   │   ├── handlers.ts
+│   │   │   └── server.ts
+│   │   └── playwright
+│   │       └── browser-utils.ts
+│   └── unit
+│       ├── api
+│       │   ├── transactions
+│       │   │   └── service.spec.ts
+│       │   └── upload
+│       │       └── service.spec.ts
+│       ├── lib
+│       │   ├── formatting.spec.ts
+│       │   └── hooks
+│       │       ├── useFileSelection.spec.ts
+│       │       ├── useOnboardingFlag.spec.ts
+│       │       ├── useOnboardingProgress.spec.ts
+│       │       ├── useSaveTransactions.spec.ts
+│       │       └── useUploadStatement.spec.ts
+│       ├── page.spec.tsx
+│       └── snapshot-guard.spec.tsx
+├── app
+│   ├── api
+│   │   ├── transactions
+│   │   │   ├── route.ts
+│   │   │   └── service.ts
+│   │   └── upload
+│   │       ├── route.ts
+│   │       └── service.ts
+│   ├── components
+│   │   └── Logo.tsx
+│   ├── envelopes
+│   │   └── page.tsx
+│   ├── favicon.ico
+│   ├── icons
+│   │   └── ArrowRightIcon.tsx
+│   ├── layout.tsx
+│   ├── lib
+│   │   ├── fetcher.ts
+│   │   ├── formatting.ts
+│   │   ├── hooks
+│   │   │   ├── useFileSelection.ts
+│   │   │   ├── useOnboardingFlag.ts
+│   │   │   ├── useOnboardingProgress.ts
+│   │   │   ├── useSaveTransactions.ts
+│   │   │   └── useUploadStatement.ts
+│   │   ├── ports
+│   │   │   ├── defaultPorts.ts
+│   │   │   └── PortsContext.tsx
+│   │   └── types.ts
+│   ├── page.tsx
+│   └── styles
+│       ├── fonts.ts
+│       ├── globals.css
+│       ├── neutrals
+│       │   ├── blacks.ts
+│       │   ├── browns.ts
+│       │   ├── grays.ts
+│       │   └── whites.ts
+│       └── theme.config.ts
+├── debugging
+│   └── debug.html
+├── Dockerfile
+├── eslint.config.mjs
+├── next-env.d.ts
+├── next.config.ts
+├── package.json
+├── pnpm-lock.yaml
+├── pnpm-workspace.yaml
+├── postcss.config.mjs
+├── project-tree.txt
+├── public
+│   ├── file.svg
+│   ├── globe.svg
+│   ├── logo_300.png
+│   ├── logo.png
+│   ├── next.svg
+│   ├── sobres_logo.png
+│   ├── statements
+│   │   ├── balance_book_grid.png
+│   │   ├── balance_book.png
+│   │   ├── bofa
+│   │   │   └── bofa_june25_.pdf
+│   │   ├── how_to_balance.adoc
+│   │   └── tdbank 2024
+│   │       ├── View PDF Statement_2024-01-07.pdf
+│   │       ├── View PDF Statement_2024-02-07.pdf
+│   │       ├── View PDF Statement_2024-03-07.pdf
+│   │       ├── View PDF Statement_2024-04-07.pdf
+│   │       ├── View PDF Statement_2024-05-07.pdf
+│   │       ├── View PDF Statement_2024-06-07.pdf
+│   │       ├── View PDF Statement_2024-07-07.pdf
+│   │       ├── View PDF Statement_2024-08-07.pdf
+│   │       ├── View PDF Statement_2024-09-07.pdf
+│   │       ├── View PDF Statement_2024-10-07.pdf
+│   │       ├── View PDF Statement_2024-11-07.pdf
+│   │       └── View PDF Statement_2024-12-07.pdf
+│   ├── vercel.svg
+│   └── window.svg
+├── README.md
+├── tsconfig.json
+├── vitest.config.ts
+└── vitest.setup.ts
+
+30 directories, 82 files

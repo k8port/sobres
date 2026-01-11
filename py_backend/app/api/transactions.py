@@ -8,6 +8,7 @@ Objective: Provide CRUD for transactions.
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 from typing import List
 import logging
 
@@ -56,9 +57,12 @@ def get_transaction(transaction_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         logger.exception(f"Error fetching transaction {transaction_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    
+class SaveOut(BaseModel):
+    count: int
 
 # to create new transactions via bulk save (multiple transactions saved at once) 
-@router.post("/api/transactions", response_model=List[TransactionSchema])
+@router.post("/api/transactions", response_model=SaveOut)
 def create_transactions(
     transactions: List[TransactionCreate],
     db: Session = Depends(get_db)
@@ -68,6 +72,9 @@ def create_transactions(
     """
     logger.info(f"Creating {len(transactions)} transactions")
     try:
+        if not transactions:
+            return SaveOut(count=0)
+        
         db_objects = [
             Transaction(
                 date=tx.date,
@@ -84,7 +91,9 @@ def create_transactions(
         db.add_all(db_objects)
         db.commit()
         logger.info("Transactions saved successfully")
-        return db_objects
+        return SaveOut(count=len(db_objects))
     except Exception as e:
+        db.rollback()
         logger.exception(f"Error saving transactions: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+

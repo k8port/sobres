@@ -53,6 +53,10 @@ def extract_pdf_content(pdf_bytes: bytes) -> Dict[str, Any]:
                 # logger.info(f"Found {len(tables)} tables on page {i}")
                 
                 for table_idx, table in enumerate(tables):
+                    if not table:
+                        logger.warning(f"Empty table found on page {i}, table #{table_idx+1}")
+                        continue
+
                     # First row as header, rest as data
                     if len(table) < 2:
                         logger.warning(f"Table on page {i}, table #{table_idx+1} has insufficient rows (needs header + data)")
