@@ -13,9 +13,10 @@ let envelopes: SpendingCategory[] = [
 
 let transactions: TransactionRow[] = [
     { id: 't_1', date: '2025-01-01', payee: 'Coffee', amount: -4.5, cat: 'payments', envelopeId: null },
-    { id: 't_2', date: '2025-01-02', payee: 'Employer', amount: 2500, cat: 'income' },
+    { id: 't_2', date: '2025-01-02', payee: 'Employer', amount: 2500, cat: 'deposits' },
     { id: 't_3', date: '2025-01-03', payee: 'Market', amount: -230.1, cat: 'payments', envelopeId: 'env_2' },
 ];
+
 
 let patchCounter = 0;
 
@@ -59,14 +60,9 @@ export const handlers = [
     http.get('/api/transactions', ({ request }) => {
         const url = new URL(request.url);
         const cat = url.searchParams.get('cat');
-        
-        if (cat === 'payments') {
-            return HttpResponse.json(transactions.filter((t) => t.cat === 'payments'));
-        }
-
-        // minimal behavior: return filtered by cat if provided, else all
-    if (cat) return HttpResponse.json(transactions.filter((t) => t.cat === cat));
-    return HttpResponse.json(transactions);
+       
+        if (!cat || cat === 'all') return HttpResponse.json(transactions);
+        return HttpResponse.json(transactions.filter((t) => t.cat === cat));
   }),
 
   http.patch('/api/transactions/:id', async ({ params, request }) => {
@@ -97,13 +93,18 @@ export const handlers = [
 
     // unblocking handler
     http.post(`/api/upload`, async () => {
+        const rows = [
+            { id: 't_1', date: '2026-01-01', description: 'Coffee', amount: -4.5, payee: 'Kroger', cat: 'payments' },
+            { id: 't_2', date: '2026-01-02', payee: 'The Man', amount: 2500, cat: 'deposits' },
+        ]
         return HttpResponse.json(
             {
                 id: 'stmt_1',
                 datetime: new Date().toISOString(),
-                rows: [
-                    { id: 1, date: '2024-01-01', description: 'Coffee', amount: 3.5, payee: 'Kroger', notes: '' }
-                ],
+                rows,
+                stored: true,
+                processed: true,
+                savedCount: rows.length
             },
             { status: 200 }
         );
@@ -167,6 +168,17 @@ export const handlers = [
         lastTransactionsBody = await request.json().catch(() => null);
         return HttpResponse.json({ ok: true }, { status: 200 });
     }),
+    http.delete('/api/transactions/:id', ({ params }) => {
+        const id = String(params.id);
+
+        const idx = transactions.findIndex((t) => t.id === id);
+        if (idx === -1) return HttpResponse.json({ error: 'not found' }, { status: 404 });
+
+        transactions = transactions.filter((t) => t.id !== id);
+
+        // 204 is typical for delete
+        return new HttpResponse(null, { status: 204 });
+    }),
 ];
 
 
@@ -176,13 +188,15 @@ export function ___getPatchCount() {
 }
 
 export function ___resetMswData() {
-  envelopes = [
-    { id: 'env_1', name: 'Rent' },
-    { id: 'env_2', name: 'Groceries' },
-  ];
-  transactions = [
-    { id: 't_1', date: '2026-01-01', payee: 'Coffee', amount: -4.5, cat: 'payments', envelopeId: null },
-    { id: 't_2', date: '2026-01-02', payee: 'Employer', amount: 2500, cat: 'income' },
-    { id: 't_3', date: '2026-01-03', payee: 'Market', amount: -32.1, cat: 'payments', envelopeId: 'env_2' },
-  ];
+    patchCounter = 0;
+
+    envelopes = [
+      { id: 'env_1', name: 'Rent' },
+      { id: 'env_2', name: 'Groceries' },
+    ];
+    transactions = [
+      { id: 't_1', date: '2026-01-01', payee: 'Coffee', amount: -4.5, cat: 'payments', envelopeId: null },
+      { id: 't_2', date: '2026-01-02', payee: 'Employer', amount: 2500, cat: 'deposits' },
+      { id: 't_3', date: '2026-01-03', payee: 'Market', amount: -32.1, cat: 'payments', envelopeId: 'env_2' },
+    ];
 }

@@ -2,15 +2,12 @@
 
 import { useState } from 'react';
 import { uploadStatement } from '@/app/api/upload/service';
+import type { UploadStoredResponse } from '@/app/lib/types';
 
-export type UploadResult = {
-    id: string;
-    datetime: string;
-};
-type UploadReturn = UploadResult | null;
+type UploadReturn = UploadStoredResponse | null;
 
 export function useUploadStatement() {
-    const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
+    const [uploadResult, setUploadResult] = useState<UploadStoredResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -25,13 +22,20 @@ export function useUploadStatement() {
                 return null;
             }
 
-            const { id, datetime } = raw as any;
+            const { id, datetime, stored, processed, savedCount } = raw as any;
             if (typeof id !== "string" || typeof datetime !== "string") {
                 setUploadResult(null);
                 return null;
             }
 
-            const normalized: UploadResult = { id, datetime };
+            const normalized: UploadStoredResponse = {
+                id,
+                datetime,
+                stored: typeof stored === 'boolean' ? stored : undefined,
+                processed: typeof processed === 'boolean' ? processed : undefined,
+                savedCount: typeof savedCount === 'number' ? savedCount : undefined,
+            };
+
             setUploadResult(normalized);
             return normalized;
 

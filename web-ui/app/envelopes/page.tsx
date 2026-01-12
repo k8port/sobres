@@ -3,7 +3,7 @@
 import useSWR from 'swr';
 import fetcher from '@/app/lib/fetcher';
 import type { SpendingCategory } from '@/app/lib/types';
-import EnvelopeForm from '@/app/components/envelopes/EnvelopeForm';
+import EnvelopeForm from '@/app/ui/envelopes/EnvelopeForm';
 
 type EnvelopesResponse = { categories: SpendingCategory[] };
 

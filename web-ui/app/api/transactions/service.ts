@@ -27,8 +27,8 @@ export type TransactionRow = {
     envelopeId?: string | null;
 };
 
-export async function getTransactions(cat: string): Promise<TransactionRow[]> {
-    const response = await fetch(`/api/transactions?cat=${encodeURIComponent(cat)}`, { method: 'GET' });
+export async function getTransactions(cat?: string): Promise<TransactionRow[]> {
+    const response = await fetch(`/api/transactions?cat=${encodeURIComponent(cat ?? '')}`, { method: 'GET' });
     if (!response.ok) throw new Error(`GET /api/transactions failed: ${response.status}`);
     return (await response.json()) as TransactionRow[];
 } 
@@ -38,9 +38,17 @@ export type PatchTransactionBody = { envelopeId: string | null };
 export async function patchTransaction(id: string, body: PatchTransactionBody): Promise<TransactionRow> {
     const response = await fetch(`/api/transactions/${encodeURIComponent(id)}`, {
         method: 'PATCH',
-        headers: { 'component-type': 'application/json' },
+        headers: { 'content-type': 'application/json' },
         body: JSON.stringify(body),
     });
     if (!response.ok) throw new Error(`PATCH /api/transactions/${id} failed: ${response.status}`);
     return (await response.json()) as TransactionRow;
+}
+
+export async function deleteTransaction(id: string): Promise<void> {
+    const response = await fetch(`/api/transactions/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+    });
+
+    if (!response.ok) throw new Error(`DELETE /api/transactions/${id} failed: ${response.status}`);
 }

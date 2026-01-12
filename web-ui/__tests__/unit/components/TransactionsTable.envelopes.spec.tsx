@@ -1,4 +1,4 @@
-import TransactionsTable from "@/app/components/transactions/TransactionsTable";
+import TransactionsTable from "@/app/ui/transactions/TransactionsTable";
 import { render, screen, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
 

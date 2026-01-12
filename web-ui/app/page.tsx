@@ -1,14 +1,17 @@
 'use client';
-import { useState } from "react";
+import { deleteTransaction } from "./api/transactions/service";
+import { useEffect, useState } from "react";
 import { useSaveTransactions } from "@/app/lib/hooks/useSaveTransactions";
 import { useOnboardingFlag } from "@/app/lib/hooks/useOnboardingFlag";
 import { useOnboardingProgress } from "@/app/lib/hooks/useOnboardingProgress";
 import { useUploadAndParse } from "@/app/lib/hooks/useUploadAndParse";
 import { useEditableNotes } from "@/app/lib/hooks/useEditableNotes";
+import { setCachedRows } from "@/app/lib/transactionsCache";
 
-import Logo from "@/app/components/Logo";
-import OnboardingPrompt from "@/app/components/OnboardingPrompt";
-import TransactionsTable from "@/app/components/transactions/TransactionsTable";
+import Logo from "@/app/ui/Logo";
+import OnboardingPrompt from "@/app/ui/OnboardingPrompt";
+import TransactionsTable from '@/app/ui/transactions/TransactionsTable';
+import NavMenu from "./ui/NavMenu";
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
@@ -18,7 +21,26 @@ export default function Home() {
   const { run, isUploading, uploadError, uploadResult, parseStatus, parseError, rows } = useUploadAndParse();
   const { save, isSaving, saveError, saveSuccess } = useSaveTransactions(rows);
   const { notesById, setNote, withNotes } = useEditableNotes(rows);
-  
+  const [displayRows, setDisplayRows] = useState(rows);
+
+  useEffect(() => {
+    setDisplayRows;
+  }, [rows]);
+ 
+  const onDeleteTransaction = async (id: string | number) => {
+    const strId = String(id);
+    const prev = displayRows;
+
+    setDisplayRows((rs) => rs.filter((r: any) => String(r.id) !== strId));
+
+    try {
+      await deleteTransaction(strId);
+    } catch (e) {
+      setDisplayRows(prev);
+      throw e;
+    } 
+  };
+
   const handleSave = async () => {
     const rowsWithNotes = withNotes();
     await save(rowsWithNotes); // update useSaveTransactions to accept rowsWithNotes as optional override argument
@@ -29,7 +51,6 @@ export default function Home() {
       alert("Please upload a file first");
       return;
     }
-
     await run(file)
     setOnboardingFlag(true);
   }
@@ -48,13 +69,17 @@ export default function Home() {
       setFile(file);
     }
   }
+
+  const navEnabled = Boolean(uploadResult?.stored || (rows && rows.length > 0));
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-crayolablue to-aquamarine">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-linear-to-b from-crayolablue to-aquamarine">
 
       <h1 className="text-6xl font-lobster font-bold text-ice stroke-white mb-16 pt-10">Above Money, Beyond Survival</h1>
       <Logo />
       <h2 className="text-2xl font-slackey font-bold text-yellowjasmine mb-6 pt-10">Bank Statement Upload</h2>
 
+      {navEnabled && <NavMenu enabled={navEnabled} />}
       {isOnboarding && (
         <OnboardingPrompt
           uploadedMonths={uploadedMonths}
@@ -62,6 +87,7 @@ export default function Home() {
           percent={percent}
         />
       )} 
+
       
       <form className="bg-white mt-6 p-8 shadow-md rounded space-y-4 w-full max-w-md">
         <label htmlFor="file" className="block text-sm font-medium text-gray-700">Upload Account Statement</label>
@@ -90,14 +116,20 @@ export default function Home() {
         )}
       </form>
 
+      {uploadResult?.stored && (
+        <div className="mt-4 w-full max-w-md bg-green-50 text-green-700 p-3 rounded border-green-200">
+          <p>Upload received and saved successfully</p>
+        </div>
+      )}
+
+      {uploadResult?.processed && (
+        <div className="mt-2 w-full max-w-md bg-green-50 text-green-700 p-3 rounded border-green-200">
+          <p>Statement processed successfully and ({uploadResult.savedCount ?? rows?.length ?? 0 }) transactions saved to database.</p>
+        </div>
+      )}
+
       {rows && rows.length > 0 && (
         <>
-            <TransactionsTable
-                rows={rows}
-                notesById={notesById}
-                isSaving={isSaving}
-                onNotesChange={setNote}
-            />
             <div className="mt-4">
               <button
                   type="button"
@@ -115,6 +147,13 @@ export default function Home() {
                   <p className="mt-2 text-sm text-red-600">{saveError}</p>
               )}
             </div>
+            <TransactionsTable
+                rows={rows}
+                notesById={notesById}
+                isSaving={isSaving}
+                onNotesChange={setNote}
+                onDeleteTransaction={onDeleteTransaction}
+            />
         </>
       )}
 
