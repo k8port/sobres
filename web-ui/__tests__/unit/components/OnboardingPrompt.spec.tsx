@@ -1,7 +1,7 @@
 // __tests__/unit/lib/components/OnboardingPrompt.spec.tsx
 
 import { render, screen } from '@testing-library/react';
-import OnboardingPrompt from '@/app/components/OnboardingPrompt';
+import OnboardingPrompt from '@/app/ui/OnboardingPrompt';
 import { it, expect } from 'vitest';
 
 it("displays onboarding prompt when uploaded months is less than 12", () => {

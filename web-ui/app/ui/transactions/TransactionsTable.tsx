@@ -12,6 +12,7 @@ export interface TransactionsTableProps {
     envelopes?: SpendingCategory[];
     envelopeByTransId?: Record<string | number, string | null>
     onEnvelopeChange?: (transId: string | number, envelopeId: string | null) => void;
+    onDeleteTransaction?: (transId: string | number) => void | Promise<void>;
 }
 
 export default function TransactionsTable({
@@ -21,13 +22,14 @@ export default function TransactionsTable({
     onNotesChange,
     envelopes = [],
     envelopeByTransId = {},
-    onEnvelopeChange
+    onEnvelopeChange,
+    onDeleteTransaction,
 }: TransactionsTableProps) {
     if (!rows?.length) return null;
 
     const keys = Object.keys(rows[0]);
-    const idOf = (row: Row) => (row.id as string | number) ?? JSON.stringify(row);
     const hasPayments = rows.some((r) => String(r.cat ?? "") === "payments");
+    const showActions = typeof onDeleteTransaction === "function";
 
     return (
         <div className="mt-10 w-full max-w-4xl bg-white shadow rounded p-4 overflow-auto">
@@ -39,9 +41,14 @@ export default function TransactionsTable({
                             <th key={key} className="px-4 py-2 text-xs border-b">{key}</th>
                         ))}
 
+                        
                         {hasPayments && (
                             <th className="px-4 py-2 text-xs border-b">Envelope Spending Category</th>
                         )}
+
+                        {showActions && (
+                            <th className="px-4 py-2 text-xs border-b">Remove</th> 
+                        )} 
 
                         <th className="px-4 py-2 text-xs border-b">Jot a note</th>
                     </tr>
@@ -49,8 +56,8 @@ export default function TransactionsTable({
                 
                 <tbody className="bg-white divide-y divide-gray-200">
                     {rows.map((row, i) => {
-                        const id = idOf(row);
                         const isPayment = String(row.cat ?? "") === "payments";
+                        const rowId = row.id as string | number;
 
                         return (
                             <tr key={i} className="even:bg-gray-50">
@@ -68,8 +75,8 @@ export default function TransactionsTable({
                                             <select aria-label="Spending Category"
                                                     className="border rounded p-1 text-sm"
                                                     disabled={isSaving}
-                                                    value={envelopeByTransId[id] ?? ""}
-                                                    onChange={(e) => onEnvelopeChange?.(id, e.target.value || null)}
+                                                    value={envelopeByTransId[rowId] ?? ""}
+                                                    onChange={(e) => onEnvelopeChange?.(rowId, e.target.value || null)}
                                                 >
                                                     <option value="">Unassigned</option>
                                                     {envelopes.map((env) => (
@@ -82,12 +89,28 @@ export default function TransactionsTable({
                                     </td>
                                 )} 
 
+                                {showActions && (
+                                    <td className="px-4 py-2 whitespace-nowrap border-b">
+                                        {typeof rowId === 'string' || typeof rowId === 'number' ? (
+                                            <button 
+                                                type="button"
+                                                className="text-sm text-yellowjasmine font-bold bg-duckblue py-1 px-2 mx-3 rounded-full border-[0.5] border-albescentwhite cursor-pointer"
+                                                onClick={() => onDeleteTransaction?.(rowId as string | number)}
+                                                disabled={isSaving}
+                                                aria-label={`delete transaction ${String(rowId)}`}
+                                            >x</button>
+                                        ) : (
+                                            <span aria-hidden>-</span>
+                                        )}
+                                    </td>
+                                )}
+
                                 <td className="px-4 py-2 whitespace-nowrap border-b">
                                     <input aria-label={`notes for row ${i + 1}`}
                                             placeholder="Jot note..."
                                             className="w-56 border rounded p-1 text-sm"
-                                            value={notesById[id] ?? ""}
-                                            onChange={(e) => onNotesChange(id, e.target.value)}
+                                            value={notesById[rowId] ?? ""}
+                                            onChange={(e) => onNotesChange(rowId, e.target.value)}
                                             disabled={isSaving}
                                     />
                                 </td>

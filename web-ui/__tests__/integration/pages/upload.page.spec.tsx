@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Home from '@/app/page'; // adjust if the page file path differs
-import { lastTransactionsBody } from '../test-utils/msw/server';
+import { lastTransactionsBody } from '@/__tests__/test-utils/msw/server';
 
 describe('Onboarding upload flow (integration)', () => {
     it('uploads a PDF, renders table rows, allows notes, and posts transactions', async () => {

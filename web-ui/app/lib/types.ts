@@ -15,3 +15,11 @@ export interface SpendingCategory {
     percentage?: number;
     balance?: number;
 }
+
+export type UploadStoredResponse {
+  id: string;
+  datetime?: string;
+  stored?: boolean;
+  processed?: boolean;
+  savedCount?: number;
+}

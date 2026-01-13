@@ -1,7 +1,7 @@
 // __tests__/unit/lib/components/TransactionsTable.spec.tsx
 
 import { render, screen, within } from '@testing-library/react';
-import TransactionsTable from '@/app/components/transactions/TransactionsTable';
+import TransactionsTable from '@/app/ui/transactions/TransactionsTable';
 import { it, vi, expect } from 'vitest';
 
 it("expects input field for notes", () => {

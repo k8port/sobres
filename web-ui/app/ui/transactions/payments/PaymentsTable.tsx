@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import TransactionsTable from '@/app/components/transactions/TransactionsTable';
+import TransactionsTable from '@/app/ui/transactions/TransactionsTable';
 import type { SpendingCategory } from '@/app/lib/types';
 import { getEnvelopes } from '@/app/api/envelopes/service';
-import { getTransactions, patchTransaction, type TransactionRow } from '@/app/api/transactions/service';
+import { getTransactions, patchTransaction, deleteTransaction, type TransactionRow} from '@/app/api/transactions/service';
 
 export default function PaymentsTable() {
   const [isSaving, setIsSaving] = useState(false);
@@ -52,6 +52,33 @@ export default function PaymentsTable() {
     }
   };
 
+  const onDelete = async (transId: string | number) => {
+    const id = String(transId);
+
+    // optimistic remove
+    const prevRows = rows;
+    const prevMap = envelopeByTransId;
+
+    setIsSaving(true);
+    setRows((rs) => rs.filter((r) => r.id !== id));
+    setEnvelopeByTransId((m) => {
+      const next = { ...m };
+      delete next[id];
+      return next;
+    });
+
+    try {
+      await deleteTransaction(id);
+    } catch(e) {
+      setRows(prevRows);
+      setEnvelopeByTransId(prevMap);
+      throw e;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+
   return (
     <TransactionsTable
       rows={rows as unknown as Record<string, unknown>[]}
@@ -61,6 +88,7 @@ export default function PaymentsTable() {
       envelopes={envelopes}
       envelopeByTransId={envelopeByTransId}
       onEnvelopeChange={onEnvelopeChange}
+      onDeleteTransaction={onDelete}
     />
   );
 }
