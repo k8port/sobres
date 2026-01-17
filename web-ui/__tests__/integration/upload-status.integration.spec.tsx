@@ -31,4 +31,17 @@ describe('Upload status messaging (integration)', () => {
       , {}, { timeout: 3000 })
     ).toBeInTheDocument();
   });
+  
+  it('shows stored and processed messages after upload', async () => {
+    const user = userEvent.setup();
+    render(Home());
+
+    const file = new File(['x'], 'march.pdf', { type: 'application/pdf' });
+    await user.upload(screen.getByLabelText(/upload/i), file);
+    await user.click(screen.getByRole('button', { name: /upload/i }));
+
+    expect(await screen.findByText(/received and stored successfully/i)).toBeInTheDocument();
+    expect(await screen.findByText(/successfully processed and 5 transactions saved/i)).toBeInTheDocument();
+  });
+
 });

@@ -5,7 +5,7 @@ import { getTransactions, patchTransaction } from '@/app/api/transactions/servic
 describe('API contract: /api/transactions', () => {
   beforeEach(() => ___resetMswData());
 
-  it('GET /api/transactions?cat=payments -> [{ id, date, payee, amount, envelopeId? }]', async () => {
+  it('GET /api/transactions?cat=payments -> [{ id, date, payee, amount, envelopeId }]', async () => {
     const rows = await getTransactions('payments');
     expect(Array.isArray(rows)).toBe(true);
     expect(rows.length).toBeGreaterThan(0);
@@ -18,6 +18,8 @@ describe('API contract: /api/transactions', () => {
           date: expect.any(String),
           payee: expect.any(String),
           amount: expect.any(Number),
+          envelopeId: expect.any(String),
+          uploadId: expect.any(String)
         }),
       );
     }
@@ -31,4 +33,17 @@ describe('API contract: /api/transactions', () => {
     expect(updated.id).toBe(target.id);
     expect(updated.envelopeId).toBe('env_1');
   });
+
+  it('GET /api/transactions?cat=all -> [{ id, date, payee, amount, envelopeId, uploadId }]', async () => {
+    const rows = await getTransactions('all');
+    expect(Array.isArray(rows)).toBe(true);
+    expect(rows.length).toBeGreaterThan(0);
+
+    for (const row of rows) {
+      expect(row.cat).toBe('all');
+      expect(row).toHaveProperty('uploadId');
+      expect(row).toHaveProperty('envelopeId');
+    }
+
+  })
 });

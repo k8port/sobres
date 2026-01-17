@@ -12,9 +12,9 @@ let envelopes: SpendingCategory[] = [
 ];
 
 let transactions: TransactionRow[] = [
-    { id: 't_1', date: '2025-01-01', payee: 'Coffee', amount: -4.5, cat: 'payments', envelopeId: null },
-    { id: 't_2', date: '2025-01-02', payee: 'Employer', amount: 2500, cat: 'deposits' },
-    { id: 't_3', date: '2025-01-03', payee: 'Market', amount: -230.1, cat: 'payments', envelopeId: 'env_2' },
+    { id: 't_1', date: '2025-01-01', payee: 'Coffee', amount: -4.5, cat: 'payments', envelopeId: null, uploadId: 'stmt_2501' },
+    { id: 't_2', date: '2025-01-02', payee: 'Employer', amount: 2500, cat: 'deposits', uploadId: 'stmt_2501' },
+    { id: 't_3', date: '2025-01-03', payee: 'Market', amount: -230.1, cat: 'payments', envelopeId: 'env_2', uploadId: 'stmt_2501' },
 ];
 
 
@@ -25,7 +25,8 @@ export function clearCaptured() { lastTransactionsBody = null; }
 
 // python backend handlers
 export const handlers = [
-    //  Envelopes
+    
+    //  envelopes
     http.get('/api/envelopes', () => {
         return HttpResponse.json({ categories: envelopes });
     }),
@@ -56,7 +57,7 @@ export const handlers = [
         return HttpResponse.json(created, { status: 201 });
     }),
 
-    // Transactions
+    // transactions
     http.get('/api/transactions', ({ request }) => {
         const url = new URL(request.url);
         const cat = url.searchParams.get('cat');
@@ -179,6 +180,21 @@ export const handlers = [
         // 204 is typical for delete
         return new HttpResponse(null, { status: 204 });
     }),
+
+    http.post('/api/upload', async ({ request }) => {
+    const form = await request.formData();
+    const files = form.getAll('statement');
+
+    if (!files.length) {
+      return HttpResponse.json({ error: 'No file' }, { status: 400 });
+    }
+
+    return HttpResponse.json({
+      stored: true,
+      processed: true,
+      transactionCount: 5,
+    });
+  }),
 ];
 
 
@@ -195,8 +211,8 @@ export function ___resetMswData() {
       { id: 'env_2', name: 'Groceries' },
     ];
     transactions = [
-      { id: 't_1', date: '2026-01-01', payee: 'Coffee', amount: -4.5, cat: 'payments', envelopeId: null },
-      { id: 't_2', date: '2026-01-02', payee: 'Employer', amount: 2500, cat: 'deposits' },
-      { id: 't_3', date: '2026-01-03', payee: 'Market', amount: -32.1, cat: 'payments', envelopeId: 'env_2' },
+      { id: 't_1', date: '2026-01-01', payee: 'Coffee', amount: -4.5, cat: 'payments', envelopeId: null, uploadId: 'stmt_2501' },
+      { id: 't_2', date: '2026-01-02', payee: 'Employer', amount: 2500, cat: 'deposits', uploadId: 'stmt_2501' },
+      { id: 't_3', date: '2026-01-03', payee: 'Market', amount: -32.1, cat: 'payments', envelopeId: 'env_2', uploadId: 'stmt_2501' },
     ];
 }

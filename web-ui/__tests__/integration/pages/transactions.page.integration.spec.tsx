@@ -16,4 +16,10 @@ describe('/transactions page (integration)', () => {
     expect(screen.getByText('t_2')).toBeInTheDocument();
     expect(screen.getByText('t_3')).toBeInTheDocument();
   });
+
+  it('displays upload source per transaction', async () => {
+    render(await TransactionsPage());
+
+    expect(await screen.findByText(/stmt_2501/i)).toBeInTheDocument();
+  })
 });

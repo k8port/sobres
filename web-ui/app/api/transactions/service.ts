@@ -25,6 +25,7 @@ export type TransactionRow = {
     amount: number;
     cat: 'payments' | string;
     envelopeId?: string | null;
+    uploadId?: string | null;
 };
 
 export async function getTransactions(cat?: string): Promise<TransactionRow[]> {

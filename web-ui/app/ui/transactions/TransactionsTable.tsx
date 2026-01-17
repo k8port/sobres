@@ -13,6 +13,7 @@ export interface TransactionsTableProps {
     envelopeByTransId?: Record<string | number, string | null>
     onEnvelopeChange?: (transId: string | number, envelopeId: string | null) => void;
     onDeleteTransaction?: (transId: string | number) => void | Promise<void>;
+    onSaveRow?: (transId: string | number) => void | Promise<void>;
 }
 
 export default function TransactionsTable({
@@ -24,10 +25,16 @@ export default function TransactionsTable({
     envelopeByTransId = {},
     onEnvelopeChange,
     onDeleteTransaction,
+    onSaveRow
 }: TransactionsTableProps) {
     if (!rows?.length) return null;
 
-    const keys = Object.keys(rows[0]);
+    const uploadIdKey = 'uploadId';
+    const baseKeys = Object.keys(rows[0]).filter((k) => k !== uploadIdKey);
+    const showUploadId = rows.some((r) => {
+        const v = r[uploadIdKey]; 
+        return v != null && String(r[uploadIdKey]).trim() !== '';
+    });
     const hasPayments = rows.some((r) => String(r.cat ?? "") === "payments");
     const showActions = typeof onDeleteTransaction === "function";
 
@@ -37,10 +44,13 @@ export default function TransactionsTable({
             <table className="min-w-full text-sm text-left text-gray-700 divide-y divide-gray-200">
                 <thead className="bg-gray-200">
                     <tr>
-                        {keys.map((key) => (
+                        {baseKeys.map((key) => (
                             <th key={key} className="px-4 py-2 text-xs border-b">{key}</th>
                         ))}
 
+                        {showUploadId && (
+                            <th className="px-4 py-2 whitespace-nowrap border-b">uploadId</th>
+                        )}
                         
                         {hasPayments && (
                             <th className="px-4 py-2 text-xs border-b">Envelope Spending Category</th>
@@ -48,9 +58,10 @@ export default function TransactionsTable({
 
                         {showActions && (
                             <th className="px-4 py-2 text-xs border-b">Remove</th> 
-                        )} 
+                        )}
 
                         <th className="px-4 py-2 text-xs border-b">Jot a note</th>
+                        <th className="px-4 py-2 text-xs border-b">Save</th>
                     </tr>
                 </thead>
                 
@@ -60,14 +71,20 @@ export default function TransactionsTable({
                         const rowId = row.id as string | number;
 
                         return (
-                            <tr key={i} className="even:bg-gray-50">
-                                {keys.map((k) => (
+                            <tr key={String(rowId) || i} className="even:bg-gray-50">
+                                {baseKeys.map((k) => (
                                     <td key={k} className="px-4 py-2 whitespace-nowrap border-b">
                                         {typeof row[k] === 'number' 
                                             ? (row[k] as number).toLocaleString()
                                             : String(row[k] ?? "")}
                                     </td>
                                 ))}
+
+                                {showUploadId && (
+                                    <td className="px-4 py-2 whitespace-nowrap border-b">
+                                        {String(row[uploadIdKey] ?? '')}
+                                    </td>
+                                )}
 
                                 {hasPayments && (
                                     <td className="px-4 py-2 whitespace-nowrap border-b">
@@ -106,13 +123,22 @@ export default function TransactionsTable({
                                 )}
 
                                 <td className="px-4 py-2 whitespace-nowrap border-b">
-                                    <input aria-label={`notes for row ${i + 1}`}
-                                            placeholder="Jot note..."
-                                            className="w-56 border rounded p-1 text-sm"
-                                            value={notesById[rowId] ?? ""}
-                                            onChange={(e) => onNotesChange(rowId, e.target.value)}
-                                            disabled={isSaving}
+                                    <input 
+                                        aria-label={`notes for row ${i + 1}`}
+                                        placeholder="Jot note..."
+                                        className="w-56 border rounded p-1 text-sm"
+                                        value={notesById[rowId] ?? ""}
+                                        onChange={(e) => onNotesChange(rowId, e.target.value)}
+                                        disabled={isSaving}
                                     />
+                                </td>
+
+                                <td className="px-4 py-2 whitespace-nowrap border-b">
+                                    <button
+                                        type="button"
+                                        onClick={() => onSaveRow?.(rowId)}
+                                        disabled={isSaving}
+                                    >Save</button>
                                 </td>
                             </tr>
                         );
