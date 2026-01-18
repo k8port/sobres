@@ -176,9 +176,11 @@ export const handlers = [
         }
 
         return HttpResponse.json({
+            id: 'stmt_1',
+            datetime: '2026-01-01T00:00:00Z',
             stored: true,
             processed: true,
-            transactionCount: 5,
+            savedCount: 5,
         });
   }),
 ];

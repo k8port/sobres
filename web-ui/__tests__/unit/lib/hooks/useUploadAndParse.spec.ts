@@ -21,7 +21,7 @@ describe('useUploadAndParse', () => {
                     new Response(
                         JSON.stringify({ rows: [{ id: 1 }], text: 'OK' }),
                         { status: 200, headers: { 'content-type': 'application/json' } })
-        );
+                );
 
         const { result } = renderHook(() => useUploadAndParse());
         const file = new File(['x'], 'bank.pdf', { type: 'application/pdf' });
@@ -30,25 +30,23 @@ describe('useUploadAndParse', () => {
             await result.current.run([file]);
         });
 
-        expect(uploadSpy).toHaveBeenCalledWith(file);
+        expect(uploadSpy).toHaveBeenCalledWith([file]);
         expect(parseSpy).toHaveBeenCalledWith('u-1');
         expect(result.current.uploadError).toBeFalsy();
     });
 
     it('propagates upload error and does not call parse', async () => {
         const uploadSpy = vi
-            .spyOn(uploadSvc, 'uploadStatement')
+            .spyOn(uploadSvc, 'uploadStatements')
             .mockRejectedValueOnce(new Error('upload failed'));
         
         const parseSpy = vi.spyOn(parseSvc, 'parseUploadById');
 
         const { result } = renderHook(() => useUploadAndParse());
-        const file = new File(['x'], 'bank.pdf', { type: 'application/json' });
+        const file = new File(['x'], 'bank.pdf', { type: 'application/pdf' });
 
         // IMPORTANT: run() triggers hook state updates and must be kept within act
-        await act(async () => {
-            await expect(result.current.run(file)).rejects.toThrow('upload failed');
-        });
+        await expect(result.current.run([file])).rejects.toThrow('upload failed');
 
         expect(uploadSpy).toHaveBeenCalledTimes(1);
         expect(parseSpy).not.toHaveBeenCalled();
@@ -61,7 +59,7 @@ describe('useUploadAndParse', () => {
 
     it('propagates parse error after successful upload', async () => {
         const uploadSpy = vi
-            .spyOn(uploadSvc, 'uploadStatement')
+            .spyOn(uploadSvc, 'uploadStatements')
             .mockResolvedValue({ id: 'u-2', datetime: 'd' } as any);
 
         // return a non-2xx status to drive parse-hook error state (dependent on impl)  
@@ -81,7 +79,7 @@ describe('useUploadAndParse', () => {
 
         await act(async () => {
             // when parse hook throws to prevent premature test failure
-            await result.current.run(file).catch(() => {});
+            await result.current.run([file]).catch(() => {});
         });
 
         expect(uploadSpy).toHaveBeenCalledTimes(1);
