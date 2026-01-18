@@ -6,8 +6,9 @@ export function useUploadAndParse() {
     const upload = useUploadStatement();
     const parseHook = useParseStatement();
 
-    const run = async (file: File) => {
-        const up = await upload.fileUpload(file);
+    const run = async (files: File | File[]) => {
+        const list = Array.isArray(files) ? files : [files];
+        const up = await upload.fileUploadMany(list);
         if (up?.id) {
             await parseHook.parse(up.id);
         }

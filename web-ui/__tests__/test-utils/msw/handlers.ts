@@ -20,6 +20,9 @@ let transactions: TransactionRow[] = [
 
 let patchCounter = 0;
 
+export let lastUploadCount = 0;
+export function clearUploadCaptured() { lastUploadCount = 0; }
+
 export let lastTransactionsBody: any = null;
 export function clearCaptured() { lastTransactionsBody = null; }
 
@@ -184,6 +187,7 @@ export const handlers = [
     http.post('/api/upload', async ({ request }) => {
     const form = await request.formData();
     const files = form.getAll('statement');
+    lastUploadCount = files.length;
 
     if (!files.length) {
       return HttpResponse.json({ error: 'No file' }, { status: 400 });
@@ -205,6 +209,7 @@ export function ___getPatchCount() {
 
 export function ___resetMswData() {
     patchCounter = 0;
+    lastUploadCount = 0;
 
     envelopes = [
       { id: 'env_1', name: 'Rent' },

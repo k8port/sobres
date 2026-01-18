@@ -14,7 +14,7 @@ import TransactionsTable from '@/app/ui/transactions/TransactionsTable';
 import NavMenu from "./ui/NavMenu";
 
 export default function Home() {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   
   const { isOnboarding, setOnboardingFlag } = useOnboardingFlag();
   const { uploadedMonths, percent, prevCalendarYear } = useOnboardingProgress({ primaryAccountId: 'acct-1' });
@@ -24,7 +24,7 @@ export default function Home() {
   const [displayRows, setDisplayRows] = useState(rows);
 
   useEffect(() => {
-    setDisplayRows;
+    setDisplayRows(rows);
   }, [rows]);
  
   const onDeleteTransaction = async (id: string | number) => {
@@ -47,11 +47,11 @@ export default function Home() {
   }
 
   const handleUpload = async () => {
-    if (!file) {
+    if (files.length === 0) {
       alert("Please upload a file first");
       return;
     }
-    await run(file)
+    await run(files)
     setOnboardingFlag(true);
   }
 
@@ -64,10 +64,8 @@ export default function Home() {
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFile(file);
-    }
+    const selected = Array.from(e.target.files ?? []);
+    setFiles(selected);
   }
 
   const navEnabled = Boolean(uploadResult?.stored || (rows && rows.length > 0));
@@ -94,17 +92,23 @@ export default function Home() {
         <input
           type="file"
           accept="application/pdf, .pdf"
+          multiple
           onChange={handleFileChange}
           id="file"
           className="block w-full text-sm text-gray-900 border border-gray-300 rounded cursor-pointer p-2"
         />
-        {file && <p className="text-sm text-gray-500">Selected: {file.name}</p>}
+        
+        {files.length > 0 &&  (
+          <p className="text-sm text-gray-500">
+            Selected: {files.map((f) => f.name).join(', ')}
+          </p>
+        )}
         
         <button
           type="button"
           onClick={handleUpload}
           className="mt-2 w-full bg-blue-600 text-white py-2 px-4 rounded cursor-pointer hover:bg-blue-700 disabled:opacity-50 disabled:cursor-none"
-          disabled={parseStatus === 'parsing' || !file}
+          disabled={parseStatus === 'parsing' || files.length === 0}
         >
           {isUploading ? "Uploading..." : "Upload Account Statement"}
         </button>

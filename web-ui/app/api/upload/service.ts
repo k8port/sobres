@@ -29,3 +29,19 @@ export async function uploadStatement(file: File) {
 
     return body as { id: string; datetime: string };
 }
+
+export async function uploadStatements(files: File[]) {
+    const fd = new FormData();
+    for (const f of files) fd.append('statement', f);
+
+    const result = await fetch('/api/upload', {
+        method: 'POST',
+        body: fd
+    });
+
+    if (!result.ok) {
+        const text = await result.text().catch(() => '');
+        throw new Error(text || `Upload failed (${result.status})`);
+    }
+    return result.json();
+}
