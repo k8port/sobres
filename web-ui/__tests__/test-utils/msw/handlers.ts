@@ -169,6 +169,7 @@ export const handlers = [
     http.post('/api/upload', async ({ request }) => {
         const form = await request.formData();
         const files = form.getAll('statement');
+        
         lastUploadCount = files.length;
 
         if (!files.length) {
@@ -176,12 +177,14 @@ export const handlers = [
         }
 
         return HttpResponse.json({
-            id: 'stmt_1',
-            datetime: '2026-01-01T00:00:00Z',
+            id: 'u-123',
+            datetime: '2025-08-10T12:00:00Z',
             stored: true,
             processed: true,
             savedCount: 5,
-        });
+        }, 
+        { status: 201, headers: { 'content-type': 'application/json' } }
+    );
   }),
 ];
 

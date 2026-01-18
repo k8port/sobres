@@ -32,7 +32,6 @@ export default function Home() {
     const prev = displayRows;
 
     setDisplayRows((rs) => rs.filter((r: any) => String(r.id) !== strId));
-
     try {
       await deleteTransaction(strId);
     } catch (e) {
@@ -53,14 +52,6 @@ export default function Home() {
     }
     await run(files)
     setOnboardingFlag(true);
-  }
-
-  const handleParse = async () => {
-    if (!uploadResult) {
-      alert("Please upload a file first");
-      return;
-    }
-    await run(file!);
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
