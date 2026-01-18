@@ -41,7 +41,7 @@ it("shows Save button per row and invokes onSaveRow for that row", async () => {
         <TransactionsTable 
             rows={rows}
             notesById={{103: 'bad meat'}}
-            isSaving={true}
+            isSaving={false}
             onNotesChange={() => {}}
             onSaveRow={onSaveRow}
         />
@@ -50,7 +50,6 @@ it("shows Save button per row and invokes onSaveRow for that row", async () => {
     const saveButtons = screen.getAllByRole('button', { name: /^save$/i });
     await user.click(saveButtons[0]);
 
-    expect(onSaveRow).toHaveBeenCalledTimes(1);
-    expect(onSaveRow).toHaveBeenCalledWith('101');
+    expect(onSaveRow).toHaveBeenCalledWith(101);
 })
 

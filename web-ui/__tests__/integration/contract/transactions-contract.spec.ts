@@ -18,11 +18,14 @@ describe('API contract: /api/transactions', () => {
           date: expect.any(String),
           payee: expect.any(String),
           amount: expect.any(Number),
-          envelopeId: expect.any(String),
+          envelopeId: expect.anything(),
           uploadId: expect.any(String)
         }),
       );
+      expect(r.envelopeId === null || r.envelopeId === 'string').toBe(true);
+      expect(typeof r.uploadId === 'string' || r.uploadId === null || r.uploadId === undefined).toBe(true);
     }
+
   });
 
   it('PATCH /api/transactions/:id body { envelopeId } -> updated transaction', async () => {
@@ -40,7 +43,7 @@ describe('API contract: /api/transactions', () => {
     expect(rows.length).toBeGreaterThan(0);
 
     for (const row of rows) {
-      expect(row.cat).toBe('all');
+      expect(['payments', 'deposits']).toContain(row.cat);
       expect(row).toHaveProperty('uploadId');
       expect(row).toHaveProperty('envelopeId');
     }

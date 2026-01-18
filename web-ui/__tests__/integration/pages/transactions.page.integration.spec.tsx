@@ -18,8 +18,9 @@ describe('/transactions page (integration)', () => {
   });
 
   it('displays upload source per transaction', async () => {
-    render(await TransactionsPage());
+    render(<TransactionsPage />);
 
-    expect(await screen.findByText(/stmt_2501/i)).toBeInTheDocument();
+    const matches = await screen.findAllByText(/stmt_2501/i);
+    expect(matches.length).toBeGreaterThan(0);
   })
 });

@@ -34,7 +34,7 @@ describe('Upload status messaging (integration)', () => {
   
   it('shows stored and processed messages after upload', async () => {
     const user = userEvent.setup();
-    render(Home());
+    render(<Home />);
 
     const file = new File(['x'], 'march.pdf', { type: 'application/pdf' });
     await user.upload(screen.getByLabelText(/upload/i), file);

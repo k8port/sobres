@@ -6,7 +6,7 @@ import { lastUploadCount } from "../test-utils/msw/handlers";
 
 it('allows selecting multiple statements and uploads them together', async () => {
   const user = userEvent.setup();
-  render(Home());
+  render(<Home />);
 
   const fileInput = screen.getByLabelText(/upload/i);
 

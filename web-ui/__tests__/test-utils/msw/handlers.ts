@@ -67,52 +67,51 @@ export const handlers = [
        
         if (!cat || cat === 'all') return HttpResponse.json(transactions);
         return HttpResponse.json(transactions.filter((t) => t.cat === cat));
-  }),
+    }),
 
-  http.patch('/api/transactions/:id', async ({ params, request }) => {
-    patchCounter += 1;
-    const id = String(params.id);
-    const body = (await request.json()) as { envelopeId?: unknown };
+    http.patch('/api/transactions/:id', async ({ params, request }) => {
+        patchCounter += 1;
+        const id = String(params.id);
+        const body = (await request.json()) as { envelopeId?: unknown };
 
-    const idx = transactions.findIndex((t) => t.id === id);
-    if (idx === -1) return HttpResponse.json({ error: 'not found' }, { status: 404 });
+        const idx = transactions.findIndex((t) => t.id === id);
+        if (idx === -1) return HttpResponse.json({ error: 'not found' }, { status: 404 });
 
-    // Contract: allow string or null
-    const next = body.envelopeId === null || typeof body.envelopeId === 'string'
-      ? (body.envelopeId as string | null)
-      : undefined;
+        // Contract: allow string or null
+        const next = body.envelopeId === null || typeof body.envelopeId === 'string'
+        ? (body.envelopeId as string | null)
+        : undefined;
 
-    if (next === undefined) {
-      return HttpResponse.json({ error: 'invalid envelopeId' }, { status: 400 });
-    }
+        if (next === undefined) {
+        return HttpResponse.json({ error: 'invalid envelopeId' }, { status: 400 });
+        }
 
-    // enforce “payments only”
-    if (transactions[idx].cat !== 'payments') {
-      return HttpResponse.json({ error: 'envelopeId allowed for payments only' }, { status: 409 });
-    }
+        // enforce “payments only”
+        if (transactions[idx].cat !== 'payments') {
+        return HttpResponse.json({ error: 'envelopeId allowed for payments only' }, { status: 409 });
+        }
 
-    transactions[idx] = { ...transactions[idx], envelopeId: next };
-    return HttpResponse.json(transactions[idx]);
-  }),
+        transactions[idx] = { ...transactions[idx], envelopeId: next };
+        return HttpResponse.json(transactions[idx]);
+    }),
+    // transactions endpoint
+    http.post(`${BACKEND_URL}/api/transactions`, async ({ request }) => {
+        lastTransactionsBody = await request.json().catch(() => null);
+        return HttpResponse.json({ ok: true }, { status: 200 });
+    }),
+    http.delete('/api/transactions/:id', ({ params }) => {
+        const id = String(params.id);
+
+        const idx = transactions.findIndex((t) => t.id === id);
+        if (idx === -1) return HttpResponse.json({ error: 'not found' }, { status: 404 });
+
+        transactions = transactions.filter((t) => t.id !== id);
+
+        // 204 is typical for delete
+        return new HttpResponse(null, { status: 204 });
+    }),
 
     // unblocking handler
-    http.post(`/api/upload`, async () => {
-        const rows = [
-            { id: 't_1', date: '2026-01-01', description: 'Coffee', amount: -4.5, payee: 'Kroger', cat: 'payments' },
-            { id: 't_2', date: '2026-01-02', payee: 'The Man', amount: 2500, cat: 'deposits' },
-        ]
-        return HttpResponse.json(
-            {
-                id: 'stmt_1',
-                datetime: new Date().toISOString(),
-                rows,
-                stored: true,
-                processed: true,
-                savedCount: rows.length
-            },
-            { status: 200 }
-        );
-    }),
     http.post(`/api/upload/parse`, async ({ request }) => {
         // UI calls using ?uploadId=... and/or JSON body
         const url = new URL(request.url);
@@ -167,37 +166,20 @@ export const handlers = [
         }, { status: 200, headers: { 'Content-Type': 'application/json' } });
     }),
 
-    // transactions endpoint
-    http.post(`${BACKEND_URL}/api/transactions`, async ({ request }) => {
-        lastTransactionsBody = await request.json().catch(() => null);
-        return HttpResponse.json({ ok: true }, { status: 200 });
-    }),
-    http.delete('/api/transactions/:id', ({ params }) => {
-        const id = String(params.id);
-
-        const idx = transactions.findIndex((t) => t.id === id);
-        if (idx === -1) return HttpResponse.json({ error: 'not found' }, { status: 404 });
-
-        transactions = transactions.filter((t) => t.id !== id);
-
-        // 204 is typical for delete
-        return new HttpResponse(null, { status: 204 });
-    }),
-
     http.post('/api/upload', async ({ request }) => {
-    const form = await request.formData();
-    const files = form.getAll('statement');
-    lastUploadCount = files.length;
+        const form = await request.formData();
+        const files = form.getAll('statement');
+        lastUploadCount = files.length;
 
-    if (!files.length) {
-      return HttpResponse.json({ error: 'No file' }, { status: 400 });
-    }
+        if (!files.length) {
+            return HttpResponse.json({ error: 'No file' }, { status: 400 });
+        }
 
-    return HttpResponse.json({
-      stored: true,
-      processed: true,
-      transactionCount: 5,
-    });
+        return HttpResponse.json({
+            stored: true,
+            processed: true,
+            transactionCount: 5,
+        });
   }),
 ];
 

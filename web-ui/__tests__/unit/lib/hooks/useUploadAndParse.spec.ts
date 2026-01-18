@@ -10,9 +10,9 @@ describe('useUploadAndParse', () => {
         vi.resetAllMocks();
     });
 
-    it('uploads then parses with returned id', async () => {
+    it('uploads multiple statesments then parses with returned array of statement ids', async () => {
         const uploadSpy = vi
-            .spyOn(uploadSvc, 'uploadStatement')
+            .spyOn(uploadSvc, 'uploadStatements')
             .mockResolvedValue({ id: 'u-1', datetime: '2025-01-01T00:00:00Z' } as any);
             
             const parseSpy = vi
@@ -27,7 +27,7 @@ describe('useUploadAndParse', () => {
         const file = new File(['x'], 'bank.pdf', { type: 'application/pdf' });
 
         await act(async () => {
-            await result.current.run(file);
+            await result.current.run([file]);
         });
 
         expect(uploadSpy).toHaveBeenCalledWith(file);
