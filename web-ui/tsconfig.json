@@ -8,6 +8,7 @@
         "strict": true,
         "noEmit": true,
         // NOTE: When upgrading to TypeScript 6, add "ignoreDeprecations": "6.0" to silence baseUrl deprecation.
+        "ignoreDeprecations": "6.0",
         "esModuleInterop": true,
         "forceConsistentCasingInFileNames": true,
         "module": "esnext",

@@ -9,6 +9,7 @@ it('allows selecting multiple statements and uploads them together', async () =>
   render(<Home />);
 
   const fileInput = screen.getByLabelText(/upload/i);
+  console.log('fileInput', fileInput);
 
   const files = [
     new File(['a'], 'jan.pdf', { type: 'application/pdf' }),
@@ -20,6 +21,6 @@ it('allows selecting multiple statements and uploads them together', async () =>
   const submit = screen.getByRole('button', { name: /upload/i });
   await user.click(submit);
 
-  await screen.findByText(/upload has been received/i);
+  await screen.findByText(/Upload received and saved successfully/i);
   expect(lastUploadCount).toBe(2);
 });

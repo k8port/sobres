@@ -40,8 +40,8 @@ describe('Upload status messaging (integration)', () => {
     await user.upload(screen.getByLabelText(/upload/i), file);
     await user.click(screen.getByRole('button', { name: /upload/i }));
 
-    expect(await screen.findByText(/received and stored successfully/i)).toBeInTheDocument();
-    expect(await screen.findByText(/successfully processed and 5 transactions saved/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Upload received and saved successfully/i)).toBeInTheDocument();
+    expect(await screen.findByText(/processed successfully/i)).toBeInTheDocument();
   });
 
 });

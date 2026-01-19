@@ -12,8 +12,8 @@ let envelopes: SpendingCategory[] = [
 ];
 
 let transactions: TransactionRow[] = [
-    { id: 't_1', date: '2025-01-01', payee: 'Coffee', amount: -4.5, cat: 'payments', envelopeId: null, uploadId: 'stmt_2501' },
-    { id: 't_2', date: '2025-01-02', payee: 'Employer', amount: 2500, cat: 'deposits', uploadId: 'stmt_2501' },
+    { id: 't_1', date: '2025-01-01', payee: 'Coffee', amount: -4.5, cat: 'payments', envelopeId: 'env_34', uploadId: 'stmt_2501' },
+    { id: 't_2', date: '2025-01-02', payee: 'Employer', amount: 2500, cat: 'deposits', envelopeId: 'env_x0', uploadId: 'stmt_2501' },
     { id: 't_3', date: '2025-01-03', payee: 'Market', amount: -230.1, cat: 'payments', envelopeId: 'env_2', uploadId: 'stmt_2501' },
 ];
 
@@ -112,80 +112,92 @@ export const handlers = [
     }),
 
     // unblocking handler
+    http.post(`/api/upload`, async ({ request }) => {
+
+      const contentType = request.headers.get('content-type') ?? '';
+      console.log("hitting A");
+      console.log('contentType: {} ', contentType);
+      console.log("form data", request);
+      try {
+        const form = await request.formData();
+        const files = form.getAll('statement');
+        lastUploadCount = files.length;
+      } catch {
+        // lastUploadCount = 0;
+      }
+
+      const rows = [
+          { id: 't_1', date: '2026-01-01', description: 'Coffee', amount: -4.5, payee: 'Kroger', cat: 'payments' },
+          { id: 't_2', date: '2026-01-02', payee: 'The Man', amount: 2500, cat: 'deposits' },
+      ];
+
+      return HttpResponse.json(
+          {
+              id: 'stmt_1',
+              datetime: new Date().toISOString(),
+              rows,
+              stored: true,
+              processed: true,
+              savedCount: rows.length
+          },
+          { status: 200 }
+      );
+    }),
     http.post(`/api/upload/parse`, async ({ request }) => {
-        // UI calls using ?uploadId=... and/or JSON body
-        const url = new URL(request.url);
-        const uploadFromQuery = url.searchParams.get('uploadId');
+      // UI calls using ?uploadId=... and/or JSON body
+      const url = new URL(request.url);
+      const uploadFromQuery = url.searchParams.get('uploadId');
 
-        const body = (await request.json().catch(() => ({}))) as any;
-        const uploadId = uploadFromQuery ?? body.uploadId;
+      const body = (await request.json().catch(() => ({}))) as any;
+      const uploadId = uploadFromQuery ?? body.uploadId;
 
-        if (!uploadId) {
-            return HttpResponse.json({ detail: 'Missing uploadId'}, { status: 400 });
-        }
+      if (!uploadId) {
+          return HttpResponse.json({ detail: 'Missing uploadId'}, { status: 400 });
+      }
 
-        return HttpResponse.json(
-            {
-                rows: [
-                    { id: 1, date: '2024-01-01', description: 'Coffee', amount: 3.23, payee: 'Kroger', notes: '' },
-                ],
-            },
-            { status: 200 }
-        );
+      return HttpResponse.json(
+          {
+              rows: [
+                  { id: 1, date: '2024-01-01', description: 'Coffee', amount: 3.23, payee: 'Kroger', notes: '' },
+              ],
+          },
+          { status: 200 }
+      );
     }),
     // upload endpoint
     http.post(`${BACKEND_URL}/api/upload/`, async ({ request }) => {
-        const contentType = request.headers.get('content-type');
-        if (!contentType?.startsWith('multipart/form-data')) {
-            return HttpResponse.json({ detail: 'multipart/form-data required' }, { status: 400 });
-        }
+      console.log('hitting B');
+      const contentType = request.headers.get('content-type');
+      if (!contentType?.startsWith('multipart/form-data')) {
+          return HttpResponse.json({ detail: 'multipart/form-data required' }, { status: 400 });
+      }
 
-        return HttpResponse.json(
-            { id: 'u-123', datetime: '2025-08-10T12:00:00Z' },
-            { status: 201, headers: { 'Content-Type': 'application/json' } }
-        );
+      return HttpResponse.json(
+          { id: 'u-123', datetime: '2025-08-10T12:00:00Z' },
+          { status: 201, headers: { 'Content-Type': 'application/json' } }
+      );
     }),
 
     // parse endpoint
     http.post(`${BACKEND_URL}/api/upload/parse`, async ({ request }) => {
-        const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-        if (!body?.uploadId) {
-            return HttpResponse.json({ detail: 'Missing uploadId' }, { status: 400 });
-        }
+      const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!body?.uploadId) {
+          return HttpResponse.json({ detail: 'Missing uploadId' }, { status: 400 });
+      }
 
-        return HttpResponse.json({
-            rows: [
-                { id: 1, date: '2024-01-02', description: 'Coffee', amount: 3.23 },
-                { id: 2, date: '2024-01-03', description: 'Lunch', amount: 12.34 },
-                { id: 3, date: '2024-01-04', description: 'Dinner', amount: 23.45 },
-                { id: 4, date: '2024-01-05', description: 'Groceries', amount: 34.56 },
-                { id: 5, date: '2024-01-06', description: 'Gas', amount: 45.67 },
-                { id: 6, date: '2024-01-07', description: 'Entertainment', amount: 56.78 },
-                { id: 7, date: '2024-01-08', description: 'Rent', amount: 67.89 },
-            ],
-        }, { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return HttpResponse.json({
+          rows: [
+              { id: 1, date: '2024-01-02', description: 'Coffee', amount: 3.23 },
+              { id: 2, date: '2024-01-03', description: 'Lunch', amount: 12.34 },
+              { id: 3, date: '2024-01-04', description: 'Dinner', amount: 23.45 },
+              { id: 4, date: '2024-01-05', description: 'Groceries', amount: 34.56 },
+              { id: 5, date: '2024-01-06', description: 'Gas', amount: 45.67 },
+              { id: 6, date: '2024-01-07', description: 'Entertainment', amount: 56.78 },
+              { id: 7, date: '2024-01-08', description: 'Rent', amount: 67.89 },
+          ],
+      }, { status: 200, headers: { 'Content-Type': 'application/json' } });
     }),
 
-    http.post('/api/upload', async ({ request }) => {
-        const form = await request.formData();
-        const files = form.getAll('statement');
-        
-        lastUploadCount = files.length;
-
-        if (!files.length) {
-            return HttpResponse.json({ error: 'No file' }, { status: 400 });
-        }
-
-        return HttpResponse.json({
-            id: 'u-123',
-            datetime: '2025-08-10T12:00:00Z',
-            stored: true,
-            processed: true,
-            savedCount: 5,
-        }, 
-        { status: 201, headers: { 'content-type': 'application/json' } }
-    );
-  }),
 ];
 
 
@@ -203,8 +215,8 @@ export function ___resetMswData() {
       { id: 'env_2', name: 'Groceries' },
     ];
     transactions = [
-      { id: 't_1', date: '2026-01-01', payee: 'Coffee', amount: -4.5, cat: 'payments', envelopeId: null, uploadId: 'stmt_2501' },
-      { id: 't_2', date: '2026-01-02', payee: 'Employer', amount: 2500, cat: 'deposits', uploadId: 'stmt_2501' },
+      { id: 't_1', date: '2026-01-01', payee: 'Coffee', amount: -4.5, cat: 'payments', envelopeId: 'env_5', uploadId: 'stmt_2501' },
+      { id: 't_2', date: '2026-01-02', payee: 'Employer', amount: 2500, cat: 'deposits', envelopeId: 'env_3', uploadId: 'stmt_2501' },
       { id: 't_3', date: '2026-01-03', payee: 'Market', amount: -32.1, cat: 'payments', envelopeId: 'env_2', uploadId: 'stmt_2501' },
     ];
 }

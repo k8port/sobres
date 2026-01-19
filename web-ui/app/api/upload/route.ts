@@ -23,20 +23,18 @@ export async function POST(request: NextRequest) {
         }
         
         const incoming = await request.formData();
+        const files =  incoming.getAll('statement') as File[];
 
-        const hasFileKey = incoming.get('file') as File | null;
-        const hasStatementKey = incoming.get('statement') as File | null;
-        const file = hasFileKey || hasStatementKey;
-
-        if (!file) {
+        if (!files.length) {
             return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
         }
 
         // Build a backend-friendly form that satisfies real backend and tests
         const formData = new FormData();
-        formData.append('statement', file, file.name);
-        formData.append('file', file, file.name);
-
+        for (const file of files) {
+            formData.append('statement', file, file.name);
+        }
+        
         // Prefer no trailing slash to avoid 307 redirect in production
         const primary = `${BACKEND_URL}/api/upload`;
         const secondary = `${BACKEND_URL}/api/upload/`;
