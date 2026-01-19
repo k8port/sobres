@@ -113,17 +113,17 @@ export const handlers = [
 
     // unblocking handler
     http.post(`/api/upload`, async ({ request }) => {
-
-      const contentType = request.headers.get('content-type') ?? '';
       console.log("hitting A");
-      console.log('contentType: {} ', contentType);
-      console.log("form data", request);
+      
       try {
-        const form = await request.formData();
-        const files = form.getAll('statement');
-        lastUploadCount = files.length;
+        const ct = request.headers.get('content-type') ?? '';
+        if (ct.includes('multipart/form-data')) {
+            const form = await request.formData();
+            const files = form.getAll('statement');
+            lastUploadCount = files.length;
+        }
       } catch {
-        // lastUploadCount = 0;
+        console.log('catch block for multipart try');
       }
 
       const rows = [
@@ -140,7 +140,7 @@ export const handlers = [
               processed: true,
               savedCount: rows.length
           },
-          { status: 200 }
+          { status: 200, headers: { 'content-type': 'application/json' } }
       );
     }),
     http.post(`/api/upload/parse`, async ({ request }) => {

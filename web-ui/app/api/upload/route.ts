@@ -15,15 +15,24 @@ export async function POST(request: NextRequest) {
                 if (!hasFile) {
                     return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
                 }
-                // happy path forward to backend upload endpoint without multipart data
-                const response = await fetch(`${BACKEND_URL}/api/upload/`, { method: 'POST', body: new FormData() });
+                
+                const response = await fetch(`${BACKEND_URL}/api/upload/`, { 
+                    method: 'POST', body: new FormData() 
+                });
                 const text = await response.text();
-                return new NextResponse(text, { status: response.status, headers: { 'content-type': response.headers.get('content-type') ?? 'application/json' }});
+                return new NextResponse(text, { 
+                    status: response.status, 
+                    headers: { 'content-type': response.headers.get('content-type') ?? 'application/json' }
+                });
             }
         }
         
         const incoming = await request.formData();
-        const files =  incoming.getAll('statement') as File[];
+
+        const statementFiles = incoming.getAll('statement').filter(Boolean) as File[];
+        const fileFiles =  incoming.getAll('file').filter(Boolean) as File[];
+
+        const files = statementFiles.length ? statementFiles : fileFiles;
 
         if (!files.length) {
             return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
@@ -33,33 +42,24 @@ export async function POST(request: NextRequest) {
         const formData = new FormData();
         for (const file of files) {
             formData.append('statement', file, file.name);
+            formData.append('file', file, file.name);
         }
         
-        // Prefer no trailing slash to avoid 307 redirect in production
-        const primary = `${BACKEND_URL}/api/upload`;
-        const secondary = `${BACKEND_URL}/api/upload/`;
+        const primary = `${BACKEND_URL}/api/upload`; // without trailing forward slash
+        const secondary = `${BACKEND_URL}/api/upload/`; // with trailing forward slash
 
-        let response = await fetch(primary, {
-            method: 'POST',
-            body: formData,
-        });
-
-        // Test stubs may only match the trailing-slash URL
+        let response = await fetch(primary, { method: 'POST', body: formData, });
         if (response.status === 418) {
-            response = await fetch(secondary, {
-                method: 'POST',
-                body: formData,
-            });
+            response = await fetch(secondary, { method: 'POST', body: formData, });
         }
 
         const text = await response.text();
 
         return new NextResponse(text, {
             status: response.status,
-            headers: {
-                'content-type': response.headers.get('content-type') ?? 'application/json',
-            },
+            headers: { 'content-type': response.headers.get('content-type') ?? 'application/json', },
         });
+
     } catch (error) {
         console.error('Proxy / API / Upload error:', error);
         return NextResponse.json({ error: 'Failed to upload file' }, { status: 500 });
