@@ -15,6 +15,7 @@ export function useParseStatement(options: UseParseStatementOptions = {}) {
     const [status, setStatus] = useState<Status>('idle');
     const [error, setError] = useState<string | null>(null);
     const [rows, setRows] = useState<Record<string, unknown>[]>([]);
+    const [parseResults, setParseResults] = useState<Array<{ uploadId: string; count: number; processedAt: string }>>([]);
     const lastParseId = useRef<string | null>(null);
 
     const canParse = useMemo(() => status !== 'parsing', [status]);
@@ -59,7 +60,12 @@ export function useParseStatement(options: UseParseStatementOptions = {}) {
         try {
             const data = contentType.includes('application/json') ? await response.json() : {};
             const parsedRows = Array.isArray(data?.rows) ? data.rows : [];
-            setRows(parsedRows);
+            const rowsWithUploadId = parsedRows.map((row: Record<string, unknown>) => ({
+                ...row,
+                uploadId,
+            }));
+            setRows(prev => [...prev, ...rowsWithUploadId]);
+            setParseResults(prev => [...prev, { uploadId, count: parsedRows.length, processedAt: new Date().toLocaleTimeString() }]);
             setStatus('success');
             lastParseId.current = uploadId;
         } catch (e: any) {
@@ -68,5 +74,5 @@ export function useParseStatement(options: UseParseStatementOptions = {}) {
         }
     }, [dedupe, status]);
 
-    return { status, error, rows, parse, canParse };
+    return { status, error, rows, parse, canParse, parseResults };
 }

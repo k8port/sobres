@@ -36,26 +36,27 @@ describe('useUploadAndParse', () => {
     });
 
     it('propagates upload error and does not call parse', async () => {
-        const uploadSpy = vi
-            .spyOn(uploadSvc, 'uploadStatements')
-            .mockRejectedValueOnce(new Error('upload failed'));
-        
-        const parseSpy = vi.spyOn(parseSvc, 'parseUploadById');
-
-        const { result } = renderHook(() => useUploadAndParse());
-        const file = new File(['x'], 'bank.pdf', { type: 'application/pdf' });
-
-        // IMPORTANT: run() triggers hook state updates and must be kept within act
+    const uploadSpy = vi
+        .spyOn(uploadSvc, 'uploadStatements')
+        .mockRejectedValueOnce(new Error('upload failed'));
+    
+    const parseSpy = vi.spyOn(parseSvc, 'parseUploadById');
+    
+    const { result } = renderHook(() => useUploadAndParse());
+    const file = new File(['x'], 'bank.pdf', { type: 'application/pdf' });
+    
+    await act(async () => {
         await expect(result.current.run([file])).rejects.toThrow('upload failed');
-
-        expect(uploadSpy).toHaveBeenCalledTimes(1);
-        expect(parseSpy).not.toHaveBeenCalled();
-
-        // Optional: ensures queued microtasks and/or state updates are flushed
-        await waitFor(() => {
-            expect(result.current.uploadError).toBeTruthy();
-        });
     });
+    
+    expect(uploadSpy).toHaveBeenCalledTimes(1);
+    expect(parseSpy).not.toHaveBeenCalled();
+    
+    await waitFor(() => {
+        expect(result.current.uploadError).toBeTruthy();
+    });
+    });
+
 
     it('propagates parse error after successful upload', async () => {
         const uploadSpy = vi

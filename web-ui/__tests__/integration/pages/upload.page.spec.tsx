@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Home from '@/app/page'; // adjust if the page file path differs
 import { lastTransactionsBody } from '@/__tests__/test-utils/msw/server';
+import { ___getLastTransactionsBody } from '@/__tests__/test-utils/msw/handlers';
 
 describe('Onboarding upload flow (integration)', () => {
     it('uploads a PDF, renders table rows, allows notes, and posts transactions', async () => {
@@ -32,11 +33,11 @@ describe('Onboarding upload flow (integration)', () => {
 
         // Assert the transactions POST captured by MSW backend was called with notes
         await waitFor(() => {
-            expect(lastTransactionsBody).toBeTruthy();
+            expect(___getLastTransactionsBody()).toBeTruthy();
         });
 
         // Body should be an array that includes the note inline or via your "withNotes" merger
-        const body = lastTransactionsBody as any[];
+        const body = ___getLastTransactionsBody() as any[];
         expect(Array.isArray(body)).toBe(true);
         // find the first row (id:1) and verify note value present
         const row1 = body.find((r) => r.id === 1);

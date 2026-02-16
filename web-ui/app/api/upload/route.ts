@@ -10,39 +10,41 @@ export async function POST(request: NextRequest) {
         if (process.env.NODE_ENV === 'test') {
             const contentType = request.headers.get('content-type') ?? '';
             if (contentType.includes('application/json')) {
-                const body = await request.json().catch(() => null) as any;
+                const body = (await request.json().catch(() => null)) as any;
                 const hasFile = !!body?.statement || !!body?.file;
                 if (!hasFile) {
                     return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
                 }
                 
                 const response = await fetch(`${BACKEND_URL}/api/upload/`, { 
-                    method: 'POST', body: new FormData() 
+                    method: 'POST',
+                    body: new FormData(),
                 });
                 const text = await response.text();
                 return new NextResponse(text, { 
                     status: response.status, 
-                    headers: { 'content-type': response.headers.get('content-type') ?? 'application/json' }
+                    headers: { 'content-type': response.headers.get('content-type') ?? 'application/json' },
                 });
             }
         }
         
         const incoming = await request.formData();
 
+        // support for 1...n files
         const statementFiles = incoming.getAll('statement').filter(Boolean) as File[];
         const fileFiles =  incoming.getAll('file').filter(Boolean) as File[];
 
         const files = statementFiles.length ? statementFiles : fileFiles;
 
-        if (!files.length) {
-            return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+        if (!files.length) { return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
         }
 
-        // Build a backend-friendly form that satisfies real backend and tests
+        // backend-friendly form
         const formData = new FormData();
-        for (const file of files) {
-            formData.append('statement', file, file.name);
-            formData.append('file', file, file.name);
+        for (const f of files) {
+            // keep both keys if either backend or tests expect
+            formData.append('statement', f, f.name);
+            formData.append('file', f, f.name);
         }
         
         const primary = `${BACKEND_URL}/api/upload`; // without trailing forward slash
