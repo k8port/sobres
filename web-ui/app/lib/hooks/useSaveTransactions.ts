@@ -16,8 +16,9 @@ export function useSaveTransactions(rowsFromHook: unknown[]) {
         setSaveSuccess(null);
 
         try {
-            await saveTransactions(payload);
-            setSaveSuccess(`Saved ${payload.length} transactions to database`);
+            const result = await saveTransactions(payload);
+            const saved = result?.count ?? payload.length;
+            setSaveSuccess(`Saved ${saved} transactions to database`);
         } catch (err) {
             setSaveError(err instanceof Error ? err.message : "Failed to save transactions");
         } finally {

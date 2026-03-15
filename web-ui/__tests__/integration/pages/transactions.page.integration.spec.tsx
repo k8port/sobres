@@ -4,16 +4,18 @@ import { ___resetMswData } from '@/__tests__/test-utils/msw/handlers';
 import TransactionsPage from '@/app/transactions/page';
 
 describe('/transactions page (integration)', () => {
-  beforeEach(() => ___resetMswData());
+    beforeEach(() => ___resetMswData());
 
-  it('renders all rows', async () => {
-    render(<TransactionsPage />);
+    it('displays the transaction count fetched from the backend', async () => {
+        render(<TransactionsPage />);
 
-    // wait for any known row
-    expect(await screen.findByText('t_1', {}, { timeout: 3000 })).toBeInTheDocument();
-
-    // should include all seeded rows
-    expect(screen.getByText('t_2')).toBeInTheDocument();
-    expect(screen.getByText('t_3')).toBeInTheDocument();
-  });
+        // MSW seeds 3 transactions — page should show the count
+        expect(
+            await screen.findByText(
+                /user has 3 transactions to display here/i,
+                {},
+                { timeout: 3000 }
+            )
+        ).toBeInTheDocument();
+    });
 });

@@ -1,24 +1,14 @@
-// __tests__/integration/onboarding-flow.integration.spec.tsx
+import { computeDateCoverage } from '@/app/lib/dateCoverage';
 
-import React from 'react';
+export default function OnboardingPrompt({ dates }: { dates: string[] }) {
+    const { percent, gaps, complete } = computeDateCoverage(dates);
 
-export default function OnboardingPrompt({
-    uploadedMonths,
-    prevCalendarYear,
-    percent,
-}: {
-    uploadedMonths: number;
-    prevCalendarYear: number;
-    percent: number;
-}) {
-    const total = 12;
-    percent = percent || Math.min(100, Math.round((uploadedMonths / total) * 100));
-    if (uploadedMonths >= total) return null;
+    if (complete) return null;
 
     return (
         <div className="flex flex-col items-center gap-4">
-            <p data-testid="onboarding-prompt" className="text-white font-inter">
-                Begin by uploading all primary bank account statements from <strong> {prevCalendarYear} </strong>.
+            <p className="text-sm text-white">
+                Upload primary account statements from the previous year.
             </p>
             <progress
                 title={`${percent}% complete`}
@@ -27,6 +17,15 @@ export default function OnboardingPrompt({
                 max={100}
                 className="w-64"
             />
+            {gaps.length > 0 && (
+                <ul className="text-sm text-white list-disc list-inside">
+                    {gaps.map((g, i) => (
+                        <li key={i}>
+                            Missing: {g.start} to {g.end}
+                        </li>
+                    ))}
+                </ul>
+            )}
         </div>
     );
 }

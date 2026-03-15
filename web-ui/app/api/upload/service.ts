@@ -1,31 +1,24 @@
 // /app/api/upload/service.ts
 
 export async function uploadStatement(file: File) {
-    const fd = new FormData();
-    fd.append("statement", file);
+    const results = await uploadStatements([file]);
+    return results[0];
+}
 
-    const response = await fetch("/api/upload", {
-        method: "POST",
-        body: fd
-    });
+export async function uploadStatements(files: File[]) {
+    const results = await Promise.all(
+        files.map(async (f) => {
+            const fd = new FormData();
+            fd.append('statement', f, f.name);
 
-    const contentType = response.headers.get("content-type");
+            const result = await fetch('/api/upload', { method: 'POST', body: fd });
 
-    const body = contentType?.includes("application/json")
-        ? await response.json().catch(() => null)
-        : await response.text();
-    
-    if (!response.ok) {
-        const message =
-            typeof body === "string"
-                ? body
-                : body?.detail || body?.error || "Failed to upload file";
-        throw new Error(message);
-    }
-
-    if (!body || typeof body !== "object") {
-        throw new Error("Malformed upload response");
-    }
-
-    return body as { id: string; datetime: string };
+            if (!result.ok) {
+                const text = await result.text().catch(() => '');
+                throw new Error(text || `Upload failed (${result.status})`);
+            }
+            return result.json();
+        })
+    );
+    return results;
 }

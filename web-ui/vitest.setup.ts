@@ -4,8 +4,17 @@ import { cleanup } from '@testing-library/react';
 import { setupServer } from 'msw/node';
 import { handlers } from './__tests__/test-utils/msw/handlers';
 
+// Ensure fetch + MSW see the same classes
+(globalThis as any).Blob ??= Blob;
+(globalThis as any).File ??= File;
+(globalThis as any).FormData ??= FormData;
+
+
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 export const server = setupServer(...handlers);
+
+// console.log('is fetch mocked? ', !!(globalThis.fetch as any)?.mock);
+// console.log('fetch name: ', (globalThis.fetch as any)?.name);
 
 // minimal File polyfill for Node test envs
 if (typeof File === 'undefined') {
