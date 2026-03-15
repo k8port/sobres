@@ -1,62 +1,127 @@
 # Copilot / AI Agent Instructions — SOBRES
 
-Quick summary
-- This repo contains a FastAPI Python backend (py_backend) and a Next.js (app router) frontend (web-ui). The frontend proxies API requests to the backend using BACKEND_URL (defaults to http://localhost:8000).
+## Quick Summary
 
-How to run (dev)
-- Frontend (local):
-  - cd web-ui && pnpm install && pnpm run dev  # uses turbopack
-  - env: set BACKEND_URL to the backend host (defaults to http://localhost:8000)
-- Backend (local):
-  - Recommended venv workflow used in Makefile: source ~/venvs/sobres/bin/activate && cd py_backend && python main.py
-  - Or: cd py_backend && python main.py (runs Uvicorn).
-- Docker: docker-compose up --build (services: `web-ui`, `py_backend`). docker-compose sets BACKEND_URL: http://py_backend:8000 and NEXT_PUBLIC_API_URL for the UI.
-- Make targets: `make run-frontend`, `make run-backend-local`, `make run-backend-docker`, `make up`.
+SOBRES is a personal budget envelope-based expense tracking app. **Backend**: FastAPI + SQLAlchemy/SQLite (transaction/envelope CRUD, PDF statement parsing). **Frontend**: Next.js 15 (App Router) + React hooks + TailwindCSS. Frontend proxies requests via `BACKEND_URL` env var (defaults `http://localhost:8000`).
 
-Tests
-- Backend: cd py_backend && PYTHONPATH=. pytest -q  (or `make test`). Tests use an in-memory SQLite engine via conftest.py and override `get_db` dependency.
-- Frontend:
-  - Unit/integration: cd web-ui && pnpm run test (vitest)
-  - E2E: cd web-ui && pnpm run test:e2e (Playwright)
-  - Note: frontend tests use MSW handlers in `web-ui/__tests__/test-utils/msw/handlers.ts` to mock backend responses — the real backend does not need to be running for those tests.
+## How to Run (Dev)
 
-Architecture & conventions (important)
-- Backend
-  - Entry: `py_backend/main.py` (starts uvicorn -> `app.main:app`). App setup at `py_backend/app/main.py`.
-  - DB: SQLAlchemy + SQLite. DB setup in `py_backend/app/db/session.py` — by default an on-disk `budget.db` is created in the project when running the backend. Tests replace the engine with an in-memory SQLite engine.
-  - Models: `py_backend/app/db/models.py` (Transaction, Category, Envelope, Bill). Pydantic schemas live in `py_backend/app/db/schemas.py`.
-  - API routers: `py_backend/app/api/*.py` (notably `upload.py`, `transactions.py`). New routers should be `include_router`d in `app.main`.
-  - Uploads: current implementation stores files in a temporary in-memory map `_UPLOAD_STORE` (no persistence). Upload parsing uses extractors in `app/core/*`.
-- Frontend
-  - Next.js App Router (`web-ui/app`). Pages/components follow the app dir conventions.
-  - API proxy routes in `web-ui/app/api/*` forward requests to BACKEND_URL. They use `runtime = 'nodejs'` and handle fallback behaviors (e.g., trailing slash inconsistencies when forwarding uploads).
-  - Fetch helper: `web-ui/app/lib/fetcher.ts` — basic JSON fetch wrapper used by UI.
-  - Tests: unit/integration tests rely on MSW handlers which reproduce the backend contracts (e.g., `/api/upload`, `/api/upload/parse`, `/api/transactions`).
+- **Frontend**: `cd web-ui && pnpm install && pnpm run dev` (turbopack, port 3000). Env: `BACKEND_URL=http://localhost:8000`
+- **Backend**: `source ~/venvs/sobres/bin/activate && cd py_backend && python main.py` (FastAPI/Uvicorn, port 8000)
+- **Docker**: `docker-compose up --build` — sets internal BACKEND_URL: `http://py_backend:8000`
+- **Make targets**: `make run-frontend`, `make run-backend-local`, `make up`, `make test`
 
-API contract notes & gotchas (explicit)
-- Upload endpoint accepts either form key `file` or `statement` (see `py_backend/app/api/upload.py` and `web-ui/app/api/upload/route.ts`). Frontend tries both endpoints with and without trailing slash.
-- `/api/upload/parse` expects an `uploadId` (query or JSON body) and returns rows + extracted text.
-- `/api/transactions`:
-  - GET returns all transactions ordered by date desc.
-  - POST accepts a bulk list of `TransactionCreate` objects and persists them.
-  - PATCH `/api/transactions/:id` is used by the UI to set `envelopeId`. MSW enforces: envelopeId only allowed for payment transactions (returns 409 otherwise).
-- Tests rely on `py_backend/tests/conftest.py` behavior: the conftest replaces `session_mod.engine` and `SessionLocal` and overrides FastAPI dependency `get_db`. When changing `session.py`, ensure tests still override properly.
+## Development Approach
 
-Where to add features (practical)
-- Backend: add an API module in `py_backend/app/api/` and include it in `py_backend/app/main.py`. Add database models to `py_backend/app/db/models.py` and Pydantic schema to `py_backend/app/db/schemas.py`. Add / update tests in `py_backend/tests/` and use conftest patterns (in-memory DB) to test behavior.
-- Frontend: add UI pages under `web-ui/app/` and helper API proxies under `web-ui/app/api/` that forward to BACKEND_URL. Update MSW handlers under `web-ui/__tests__/test-utils/msw/handlers.ts` to reflect backend contract changes so tests remain fast and deterministic.
+**AI's Role**: I function as your pair programmer, actively collaborating on code design, implementation, and problem-solving in real-time.
 
-Useful files to inspect quickly
-- `py_backend/app/main.py`, `py_backend/app/api/upload.py`, `py_backend/app/api/transactions.py`
-- `py_backend/app/db/session.py`, `py_backend/app/db/models.py`, `py_backend/app/db/schemas.py`
-- `py_backend/tests/conftest.py`
-- `web-ui/app/api/*`, `web-ui/app/lib/fetcher.ts`, `web-ui/__tests__/test-utils/msw/handlers.ts`
-- `docker-compose.yml`, `Makefile`
+**Methodology**: SOBRES development follows **Agile Extreme Programming (XP)** practices:
 
-Guidance for AI contributors
-- Prefer reading the API modules and `msw` handlers to infer contract details before writing tests or UI behavior.
-- For backend DB changes, update tests to match conftest in `py_backend/tests/conftest.py` (in-memory engine + dependency override).
-- Keep responses / status codes consistent with MSW handlers where the UI expects particular error/status behaviors (e.g., 400 for missing uploadId, 409 for invalid envelope assignment).
+- **Test-Driven Development (TDD)**: Write tests before implementation (MSW handlers first for frontend, conftest patterns for backend)
+- **Continuous Integration**: Small, frequent commits with working code
+- **Pair Programming**: Collaborative coding with immediate feedback loops
+- **Refactoring**: Improve code quality iteratively without changing behavior
+- **Simple Design**: Prefer clarity and maintainability over complex patterns
+- **Code Review**: AI reviews proposals before implementation; user provides feedback
+- **Collective Code Ownership**: Code is organized for team understanding and modification
 
-Questions?
-- If anything here is unclear or you want expanded examples (e.g., a sample request/response or a small integration test template), say which section and I’ll iterate.
+## Testing
+
+- **Backend**: `cd py_backend && PYTHONPATH=. pytest -q` (in-memory SQLite via conftest; `get_db` dependency overridden)
+- **Frontend**:
+  - Unit/integration: `cd web-ui && pnpm run test` (vitest + @testing-library/react)
+  - E2E: `cd web-ui && pnpm run test:e2e` (Playwright)
+  - **Key**: Tests use MSW (Mock Service Worker) handlers at `web-ui/__tests__/test-utils/msw/handlers.ts` — backend NOT required to run frontend tests
+
+## Code Style & Patterns
+
+### Backend (FastAPI + SQLAlchemy)
+
+- **Dependency injection**: `Depends(get_db)` passes session to handlers (overridable in tests)
+- **Async-first**: Router functions are async-capable; use `async def` for handlers
+- **Error responses**: `HTTPException(status_code, detail=string)` propagates to client
+- **Pydantic schemas**: Use `ConfigDict(from_attributes=True)` for ORM serialization
+- **Schema pattern**: `Base`, `Create`, `Update`, `Response` for each model
+
+### Frontend (Next.js + React Hooks)
+
+- **Client components**: Mark interactive components with `'use client'` directive
+- **Custom hooks**: Encapsulate API calls & state; return `{ data, error, isLoading, run/save }` pattern
+- **Example hooks**: `useUploadAndParse()`, `useSaveTransactions()`, `useEditableNotes()` (see `web-ui/app/lib/hooks/`)
+- **Types**: Keep TypeScript interfaces in `web-ui/app/lib/types.ts` (Transaction, SpendingCategory, etc.)
+- **Styling**: TailwindCSS 4 (postcss-based); custom fonts defined in `app/layout.tsx` (lobster, opensans, slackey, inter)
+
+## Architecture
+
+- **Data flow**: Browser → Next.js API proxy routes (`/api/*`) → FastAPI backend → SQLite
+- **Database schema**: Transaction (date, amount, payee, category_id FK) → Category → Envelope; Bill separate
+- **Upload flow**: POST `/api/upload` (store PDF in-memory map) → POST `/api/upload/parse` (extract rows via pdfplumber) → frontend displays for user review → POST `/api/transactions` (bulk save)
+- **Extraction pipeline**: `statement_extractor.py` (pdfplumber) → `transaction_parser.py` (regex parsing) → normalized TransactionCreate objects
+
+## API Contract & Gotchas
+
+### Upload Endpoints
+
+- **POST `/api/upload`**: Accepts form key `file` OR `statement`. Frontend tries both with/without trailing slash for resilience.
+- **POST `/api/upload/parse`**: Requires `uploadId` (query param or JSON) → returns `{ rows: [...], extracted_text: "..." }`
+
+### Transaction Endpoints
+
+- **GET `/api/transactions`**: Returns all, ordered by date DESC
+- **POST `/api/transactions`**: Bulk insert List[TransactionCreate]; returns `{ count: number }`
+- **PATCH `/api/transactions/:id`**: Envelope assignment; only allows `envelopeId` for payment transactions (returns 409 for deposits)
+- **DELETE `/api/transactions/:id`**: Returns 204 No Content
+
+### Test Infrastructure
+
+- Backend conftest replaces `get_db` dependency + patches `session_mod.engine`/`SessionLocal` globals
+- Frontend MSW handlers control state via handler-scope arrays (mutable, preserved across test runs)
+- MSW enforces API contracts: 400 missing uploadId, 409 invalid envelope assignment, 204 for deletes
+
+## Key Files Reference
+
+| Category              | File                                                                  | Purpose                                                                 |
+| --------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| **Backend Core**      | `py_backend/app/main.py`, `py_backend/app/api/*.py`                   | FastAPI routers (upload, transactions, envelopes, categories, bills)    |
+| **Backend DB**        | `py_backend/app/db/models.py`, `schemas.py`, `session.py`             | SQLAlchemy models, Pydantic schemas, engine setup                       |
+| **Backend Logic**     | `py_backend/app/core/statement_extractor.py`, `transaction_parser.py` | PDF extraction, regex parsing, data normalization                       |
+| **Frontend Pages**    | `web-ui/app/page.tsx`, `transactions/`, `payments/`, `envelopes/`     | Main upload, transaction list, payment/deposit tracking, envelope views |
+| **Frontend Services** | `web-ui/app/api/*/service.ts`, `app/api/*/route.ts`                   | Service functions + Next.js API proxy routes                            |
+| **Frontend Hooks**    | `web-ui/app/lib/hooks/`                                               | `useUploadAndParse`, `useSaveTransactions`, `useEditableNotes`, etc.    |
+| **Frontend Types**    | `web-ui/app/lib/types.ts`                                             | TypeScript interfaces (Transaction, SpendingCategory, Category)         |
+| **Frontend UI**       | `web-ui/app/ui/`, components (Logo, NavMenu, TransactionsTable)       | Reusable UI components                                                  |
+| **Test Mocks**        | `web-ui/__tests__/test-utils/msw/handlers.ts`                         | MSW handler mocks for all API endpoints                                 |
+| **Test Setup**        | `py_backend/tests/conftest.py`, `web-ui/vitest.setup.ts`              | In-memory DB, dependency overrides, MSW setup                           |
+
+## Where to Add Features
+
+### Backend: New API Endpoint
+
+1. Add model to `py_backend/app/db/models.py` (SQLAlchemy ORM class)
+2. Add Pydantic schemas to `py_backend/app/db/schemas.py` (Create, Response classes with `from_attributes=True`)
+3. Create router in `py_backend/app/api/new_feature.py` with `@router.post()`, `@router.get()`, etc.
+4. Include router in `py_backend/app/main.py`: `app.include_router(new_router, tags=["feature"])`
+5. Add tests in `py_backend/tests/unit/` or `integration/` using conftest fixtures (in-memory DB, client)
+6. Database auto-creates on startup (no migrations yet)
+
+### Frontend: New Page/Feature
+
+1. **Update MSW handlers first** in `web-ui/__tests__/test-utils/msw/handlers.ts` (TDD approach)
+2. Add service functions in `web-ui/app/api/feature/service.ts` (e.g., `fetchFeature()`, `saveFeature()`)
+3. Create API proxy route in `web-ui/app/api/feature/route.ts` (forwards to BACKEND_URL)
+4. Build custom hook in `web-ui/app/lib/hooks/useFeature.ts` (encapsulates API + state)
+5. Add page/component in `web-ui/app/feature/page.tsx` or `app/ui/FeatureComponent.tsx`
+6. Add TypeScript interfaces to `web-ui/app/lib/types.ts`
+7. Write unit/integration tests using MSW mocks (real backend not needed)
+
+## AI Agent Checklist
+
+- [ ] Read `py_backend/app/api/transactions.py` & `web-ui/__tests__/test-utils/msw/handlers.ts` to understand API contracts
+- [ ] For DB changes: update `py_backend/tests/conftest.py` if schema changes (verify in-memory engine setup)
+- [ ] Frontend tests: update MSW handlers BEFORE writing UI code (TDD pattern)
+- [ ] Match HTTP status codes: 201 POST, 204 DELETE, 400 bad input, 409 constraint violation
+- [ ] Backend error responses: `HTTPException(status_code, detail="error message")`
+- [ ] Frontend error handling: check `error?.message` from caught exceptions
+- [ ] Verify BACKEND_URL proxying in Next.js routes (`web-ui/app/api/*/route.ts`)
+- [ ] Use `PYTHONPATH=. ` prefix when running backend tests locally
+- [ ] Env vars: `BACKEND_URL` (backend host), `NEXT_PUBLIC_API_URL` (same), both default to `http://localhost:8000`

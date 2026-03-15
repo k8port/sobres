@@ -30,13 +30,15 @@ describe('bulk upload service', () => {
         expect(fd.getAll('statement')).toHaveLength(1);
     });
 
-    it('uploads multiple statements in single request', async () => {
+    it('uploads multiple statements with one request per file', async () => {
+        let callCount = 0;
         const fetchSpy = vi.fn(async (_input: any, init: any) => {
+            callCount++;
             const fd = init.body as FormData;
-            expect(fd.getAll('statement')).toHaveLength(2);
+            expect(fd.getAll('statement')).toHaveLength(1);
 
             return new Response(
-                JSON.stringify({ id: 'u-bulk', datetime: '2025-01-01T12:00:00Z' }),
+                JSON.stringify({ id: `u-bulk-${callCount}`, datetime: '2025-01-01T12:00:00Z' }),
                 { status: 200, headers: { 'content-type': 'application/json' }}
             );
         });
@@ -48,9 +50,11 @@ describe('bulk upload service', () => {
             new File(['b'], 'feb.pdf', { type: 'application/pdf' }),
         ];
 
-        await uploadStatements(files);
+        const results = await uploadStatements(files);
     
-        expect(fetchSpy).toHaveBeenCalledTimes(1);
-        expect(fetchSpy).toHaveBeenCalledWith('/api/upload', expect.objectContaining({ method: 'POST' }));
+        expect(fetchSpy).toHaveBeenCalledTimes(2);
+        expect(results).toHaveLength(2);
+        expect(results[0].id).toBe('u-bulk-1');
+        expect(results[1].id).toBe('u-bulk-2');
     });
 });

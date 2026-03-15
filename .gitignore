@@ -91,3 +91,13 @@ docker-compose.override.yml
 # Project-specific ignores (keep these scoped)
 # ─────────────────────────────────────────────────────────────
 web-ui/public/statements/
+
+# Any statements directory anywhere in the project
+**/statements/
+
+# Any PDF document anywhere in the project
+*.pdf
+
+# Spreadsheet and CSV documents anywhere in the project
+*.csv
+*.xlsx

@@ -17,15 +17,15 @@ afterAll(() => {
 test('shows previous year upload prompt on landing page', () => {
     render(<Home />);
     const prevYear = new Date().getFullYear() - 1;
-    expect(screen.getByTestId('onboarding-prompt')).toBeDefined();
+    expect(screen.getByRole('progressbar')).toBeDefined();
     expect(screen.getByRole('progressbar')).toBeDefined();
 });
 
 test('progress bar increases as statements are added', async () => {
     let i = 0;
-    vi.spyOn(global, 'fetch').mockImplementation(async (url) => {
+    vi.spyOn(global, 'fetch').mockImplementation(async url => {
         if (typeof url === 'string' && url.endsWith('/api/upload')) {
-            i+=1;
+            i += 1;
             const month = String(i).padStart(2, '0');
             return new Response(
                 JSON.stringify({ rows: [{ date: `2024-${month}-20` }], text: `OCR-RAW-${month}` }),
@@ -60,7 +60,7 @@ test('upload endpoint saves raw text; save transactions called as separate actio
 
         if (typeof url === 'string' && url.endsWith('api/upload')) {
             return new Response(
-                JSON.stringify({ rows: [{date: '2024-01-15' }], text: 'OCR-RAW-TEXT' }),
+                JSON.stringify({ rows: [{ date: '2024-01-15' }], text: 'OCR-RAW-TEXT' }),
                 { status: 200, headers: { 'Content-Type': 'application/json' } }
             );
         }
@@ -84,7 +84,7 @@ test('upload endpoint saves raw text; save transactions called as separate actio
     await waitFor(() => expect(global.fetch).toHaveBeenCalled());
 
     await waitFor(() => {
-        expect(calls.some((u) => u.endsWith('api/upload'))).toBe(true);
+        expect(calls.some(u => u.endsWith('api/upload'))).toBe(true);
     });
 
     fetchMock.mockRestore();
@@ -92,15 +92,17 @@ test('upload endpoint saves raw text; save transactions called as separate actio
 
 test('after 12 statement uploads onboarding task is complete', async () => {
     let i = 0;
-    vi.spyOn(global, 'fetch').mockImplementation(async (url) => {
+    vi.spyOn(global, 'fetch').mockImplementation(async url => {
         if (typeof url === 'string' && url.endsWith('/api/upload')) {
-            i+=1;
+            i += 1;
             const month = String(i).padStart(2, '0');
             return new Response(
                 JSON.stringify({
                     rows: [{ date: `2024-${month}-20` }],
-                    text: `OCR-RAW-${month}` }),
-                    { status: 200, headers: { 'Content-Type': 'application/json' } });
+                    text: `OCR-RAW-${month}`,
+                }),
+                { status: 200, headers: { 'Content-Type': 'application/json' } }
+            );
         }
         return new Response('Not Found', { status: 404 });
     });

@@ -1,50 +1,33 @@
-// app/api/upload/route.ts
+// app/api/transactions/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
 
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
     try {
-        const incoming = await request.formData();
-
-        const hasFileKey = incoming.get('file') as File | null;
-        const hasStatementKey = incoming.get('statement') as File | null;
-        const file = hasFileKey || hasStatementKey;
-    
-        if (!file) {
-            return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
-        }
-
-        const formData = new FormData();
-        const forwardKey = hasFileKey ? 'file' : 'statement';
-        formData.append(forwardKey, file, file.name);
-
-        const targetA = `${BACKEND_URL}/api/upload/`;
-        const targetB = `${BACKEND_URL}/api/upload`;
-
-        let response = await fetch(targetA, {
-            method: 'POST',
-            body: formData,
-        });
-
-        if (response.status === 418) {
-            response = await fetch(targetB, {
-                method: 'POST',
-                body: formData,
-            });
-        }
-
+        const cat = request.nextUrl.searchParams.get('cat') ?? '';
+        const url = `${BACKEND_URL}/api/transactions?cat=${encodeURIComponent(cat)}`;
+        const response = await fetch(url);
         const text = await response.text();
-        
+
         return new NextResponse(text, {
             status: response.status,
-            headers: {
-                "content-type": response.headers.get("content-type") ?? "application/json",
-            },
+            headers: { 'content-type': response.headers.get('content-type') ?? 'application/json' },
         });
     } catch (error) {
-        console.error('Proxy / API / Upload error:', error);
-        return NextResponse.json({ error: 'Failed to upload file' }, { status: 500 });
+        console.error('Proxy GET /api/transactions error:', error);
+        return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 });
+    }
+}
+
+export async function DELETE(request: NextRequest) {
+    try {
+        const id = request.nextUrl.pathname.split('/').pop();
+        const response = await fetch(`${BACKEND_URL}/api/transactions/${id}`, { method: 'DELETE' });
+        return new NextResponse(null, { status: response.status });
+    } catch (error) {
+        console.error('Proxy DELETE /api/transactions error:', error);
+        return NextResponse.json({ error: 'Failed to delete transaction' }, { status: 500 });
     }
 }

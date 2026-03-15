@@ -74,7 +74,21 @@ def create_transactions(
     try:
         if not transactions:
             return SaveOut(count=0)
-        
+
+        # Deduplicate: skip transactions that already exist (same date + description + amount)
+        existing = db.query(
+            Transaction.date, Transaction.description, Transaction.amount
+        ).all()
+        existing_keys = {(row.date, row.description, row.amount) for row in existing}
+
+        new_txs = [
+            tx for tx in transactions
+            if (tx.date, tx.description, tx.amount) not in existing_keys
+        ]
+
+        if not new_txs:
+            return SaveOut(count=0)
+
         db_objects = [
             Transaction(
                 date=tx.date,
@@ -86,11 +100,11 @@ def create_transactions(
                 notes=tx.notes,
                 category_id=tx.category_id,
             )
-            for tx in transactions
+            for tx in new_txs
         ]
         db.add_all(db_objects)
         db.commit()
-        logger.info("Transactions saved successfully")
+        logger.info(f"Saved {len(db_objects)} new transactions (skipped {len(transactions) - len(db_objects)} duplicates)")
         return SaveOut(count=len(db_objects))
     except Exception as e:
         db.rollback()

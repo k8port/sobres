@@ -97,7 +97,8 @@ export const handlers = [
     // transactions endpoint
     http.post(`${BACKEND_URL}/api/transactions`, async ({ request }) => {
         lastTransactionsBody = await request.json();
-        return HttpResponse.json({ ok: true }, { status: 200 });
+        const count = Array.isArray(lastTransactionsBody) ? lastTransactionsBody.length : 0;
+        return HttpResponse.json({ count }, { status: 200 });
     }),
     http.delete('/api/transactions/:id', ({ params }) => {
         const id = String(params.id);
@@ -111,33 +112,24 @@ export const handlers = [
         return new HttpResponse(null, { status: 204 });
     }),
     /* ******************** Uploads *********************** */   
-    /* unblocking handler for uploads */
+    /* NextJS proxy upload handler - forwards to backend */
     http.post(`/api/upload`, async ({ request }) => {
-        const ct = request.headers.get("content-type") ?? "";
-        const clone = request.clone();
-
-        let filesCount = 0;
-        
-        if (ct.includes("multipart/form-data")) {
-            const fd = await clone.formData();
-            const files = fd.getAll("statement");
-            filesCount = files.length;
-        }
-        
-        lastUploadCount = filesCount;
-        
-        const rows = [
-            { id: "t_1", date: "2026-01-01", description: "Coffee", amount: 4.5, payee: "Kroger", cat: "payments" },
-            { id: "t_2", date: "2026-01-02", payee: "The Man", amount: 2500, cat: "deposits" },
-        ];
+        // In test environment, we don't strictly need to validate the FormData.
+        // If it's a POST request, assume it has a file and return success.
+        // This allows the tests to not be brittle about FormData parsing.
         
         return HttpResponse.json(
-            { id: "stmt_1", datetime: new Date().toISOString(), rows, stored: true, processed: true, savedCount: rows.length },
+            { 
+                id: `u-${Math.random().toString(36).slice(2, 9)}`,
+                datetime: new Date().toISOString(),
+                stored: true,
+            },
             { status: 200 }
         );
-    }), 
+    }),
+    
+    /* NextJS proxy parse handler - forwards to backend */
     http.post(`/api/upload/parse`, async ({ request }) => {
-        // UI calls using ?uploadId=... and/or JSON body
         const url = new URL(request.url);
         const uploadFromQuery = url.searchParams.get('uploadId');
     
@@ -147,17 +139,22 @@ export const handlers = [
         if (!uploadId) {
             return HttpResponse.json({ detail: 'Missing uploadId'}, { status: 400 });
         }
-    
+
+        // Return parsed transactions
         return HttpResponse.json(
             {
                 rows: [
-                    { id: 1, date: '2024-01-01', description: 'Coffee', amount: 3.23, payee: 'Kroger', notes: '', uploadId },
+                    { id: `${Math.random()}`, date: '2026-01-01', payee: 'Coffee Shop', amount: -4.5, cat: 'payments', uploadId },
+                    { id: `${Math.random()}`, date: '2026-01-02', payee: 'Employer Inc', amount: 2500, cat: 'deposits', uploadId },
+                    { id: `${Math.random()}`, date: '2026-01-03', payee: 'Grocery Store', amount: -45.32, cat: 'payments', uploadId },
                 ],
             },
             { status: 200 }
         );
     }),
-    http.post(`${BACKEND_URL}/api/upload/`, async ({ request }) => {
+
+    /* Backend upload endpoint */
+    http.post(`${BACKEND_URL}/api/upload`, async ({ request }) => {
         const contentType = request.headers.get('content-type');
         if (!contentType?.startsWith('multipart/form-data')) {
             return HttpResponse.json({ detail: 'multipart/form-data required' }, { status: 400 });
@@ -171,31 +168,45 @@ export const handlers = [
         } catch {
             filesCount = 0;
         }
+
+        if (!filesCount) {
+            return HttpResponse.json({ detail: 'No files provided' }, { status: 400 });
+        }
+
         lastUploadCount = filesCount;
     
+        // Return upload response indicating successful storage
         return HttpResponse.json(
-            { id: 'u-123', datetime: '2025-08-10T12:00:00Z' },
-            { status: 201, headers: { 'Content-Type': 'application/json' } }
+            { 
+                id: `u-${Math.random().toString(36).slice(2, 9)}`, 
+                datetime: new Date().toISOString(),
+                stored: true,
+            },
+            { status: 201 }
         );
     }),
-    // parse endpoint
+
+    /* Backend parse endpoint */
     http.post(`${BACKEND_URL}/api/upload/parse`, async ({ request }) => {
+        const url = new URL(request.url);
+        const uploadFromQuery = url.searchParams.get('uploadId');
         const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-        if (!body?.uploadId) {
+        const uploadId = uploadFromQuery ?? body?.uploadId;
+
+        if (!uploadId) {
             return HttpResponse.json({ detail: 'Missing uploadId' }, { status: 400 });
         }
     
+        // Return parsed transactions with realistic data
         return HttpResponse.json({
             rows: [
-                { id: 1, date: '2024-01-02', description: 'Coffee', amount: 3.23 },
-                { id: 2, date: '2024-01-03', description: 'Lunch', amount: 12.34 },
-                { id: 3, date: '2024-01-04', description: 'Dinner', amount: 23.45 },
-                { id: 4, date: '2024-01-05', description: 'Groceries', amount: 34.56 },
-                { id: 5, date: '2024-01-06', description: 'Gas', amount: 45.67 },
-                { id: 6, date: '2024-01-07', description: 'Entertainment', amount: 56.78 },
-                { id: 7, date: '2024-01-08', description: 'Rent', amount: 67.89 },
+                { id: `${Math.random()}`, date: '2026-01-01', payee: 'Coffee Shop', amount: -4.5, cat: 'payments', uploadId },
+                { id: `${Math.random()}`, date: '2026-01-02', payee: 'Employer Inc', amount: 2500, cat: 'deposits', uploadId },
+                { id: `${Math.random()}`, date: '2026-01-03', payee: 'Grocery Store', amount: -45.32, cat: 'payments', uploadId },
+                { id: `${Math.random()}`, date: '2026-01-04', payee: 'Gas Station', amount: -52.18, cat: 'payments', uploadId },
+                { id: `${Math.random()}`, date: '2026-01-05', payee: 'Electric Co', amount: -120.00, cat: 'payments', uploadId },
             ],
-        }, { status: 200, headers: { 'Content-Type': 'application/json' } });
+        }, { status: 200 });
     }),
 ];
     

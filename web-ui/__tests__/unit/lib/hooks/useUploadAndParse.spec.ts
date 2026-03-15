@@ -4,10 +4,12 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useUploadAndParse } from '@/app/lib/hooks/useUploadAndParse';
 import * as uploadSvc from '@/app/api/upload/service';
 import * as parseSvc from '@/app/api/upload/parse/service';
+import * as txSvc from '@/app/api/transactions/service';
 
 describe('useUploadAndParse', () => {
     beforeEach(() => {
         vi.resetAllMocks();
+        vi.spyOn(txSvc, 'saveTransactions').mockResolvedValue({ count: 0 });
     });
 
     it('uploads multiple statesments then parses with returned array of statement ids', async () => {
