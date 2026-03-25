@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -9,6 +11,11 @@ from app.api.transactions import router as transactions_router
 # to implement middleware (connection between backend and frontend)
 # to initialize FASTAPI
 app = FastAPI()
+
+# Dev mode: drop and recreate all tables on startup
+if os.environ.get("DEV_RESET_DB") == "1":
+    Base.metadata.drop_all(bind=engine)
+
 # to Create budget.db with tables
 Base.metadata.create_all(bind=engine)
 

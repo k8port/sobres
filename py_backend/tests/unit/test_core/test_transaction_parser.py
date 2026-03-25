@@ -5,6 +5,13 @@ from datetime import date, datetime
 from app.core.transaction_parser import get_statement_rows, get_transactions
 import logging
 
+
+def infer_mmdd_year(mmdd: str, today: date) -> date:
+    candidate = datetime.strptime(f"{mmdd}/{today.year}", "%m/%d/%Y").date()
+    if candidate > today:
+        candidate = candidate.replace(year=candidate.year - 1)
+    return candidate
+
 @pytest.fixture
 def sample_text():
     return "\n".join([
@@ -62,10 +69,14 @@ def test_get_statement_rows_parses_deposits_and_credits_and_payments(sample_text
         [{"Date":"07/01/2024","Description":"X","Amount":"$100.00","Payee":"A","Category":"C"}],
         {"date": date(2024,7,1),"description":"X","amount":100.0,"payee":"A","category":"C"}
     ),
-    # mm/dd without year → uses current year
+    # mm/dd without year -> infer year relative to today
     (
         [{"Date":"12/31","Description":"YearEnd","Amount":"$5.00"}],
-        {"date": datetime.strptime(f"12/31/{datetime.now().year-1}", "%m/%d/%Y").date(),"description":"YearEnd","amount":5.0}
+        {
+            "date": infer_mmdd_year("12/31", datetime.now().date()),
+            "description":"YearEnd",
+            "amount":5.0,
+        }
     ),
     # parentheses → negative
     (
@@ -81,3 +92,28 @@ def test_get_transactions_converts_type(raw_rows, expected):
     assert tx["date"] == expected["date"]
     assert tx["description"] == expected["description"]
     assert tx["amount"] == pytest.approx(expected["amount"])
+
+
+def test_get_transactions_infers_year_for_mmdd_using_future_rollover_rule():
+    today = datetime.now().date()
+
+    past_candidate = today.replace(day=1)
+    if past_candidate > today:
+        past_candidate = past_candidate.replace(month=max(1, today.month - 1))
+
+    future_month = 12 if today.month < 12 else 1
+    future_candidate = datetime.strptime(f"{future_month:02d}/28/{today.year}", "%m/%d/%Y").date()
+    if future_candidate <= today:
+        future_month = 1 if today.month == 12 else today.month + 1
+        future_candidate = datetime.strptime(f"{future_month:02d}/28/{today.year}", "%m/%d/%Y").date()
+
+    raw_rows = [
+        {"Date": f"{past_candidate.month:02d}/{past_candidate.day:02d}", "Description": "Past", "Amount": "$1.00"},
+        {"Date": f"{future_candidate.month:02d}/{future_candidate.day:02d}", "Description": "Future", "Amount": "$2.00"},
+    ]
+
+    txs = get_transactions(raw_rows)
+    by_desc = {tx["description"]: tx for tx in txs}
+
+    assert by_desc["Past"]["date"].year == today.year
+    assert by_desc["Future"]["date"].year == today.year - 1

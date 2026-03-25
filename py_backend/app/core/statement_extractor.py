@@ -11,8 +11,10 @@ import io
 import pdfplumber
 import pandas as pd
 import numpy as np
+import re
 import logging
-from typing import Dict, Any 
+from datetime import datetime, date
+from typing import Dict, Any, Optional, Tuple
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -111,3 +113,26 @@ def extract_pdf_content(pdf_bytes: bytes) -> Dict[str, Any]:
             "text": "",
             "tables": pd.DataFrame(),
         } 
+
+
+def extract_statement_period(text: Optional[str]) -> Optional[Tuple[date, date]]:
+    """Extract statement period dates from PDF text.
+
+    Parses the 'StatementPeriod: MonDDYYYY-MonDDYYYY' format found in
+    TD Bank statement headers.
+
+    Returns (begin_date, end_date) or None if not found.
+    """
+    if not text:
+        return None
+
+    match = re.search(r'StatementPeriod:\s*([A-Za-z]{3}\d{2}\d{4})-([A-Za-z]{3}\d{2}\d{4})', text)
+    if not match:
+        return None
+
+    try:
+        begin = datetime.strptime(match.group(1), "%b%d%Y").date()
+        end = datetime.strptime(match.group(2), "%b%d%Y").date()
+        return (begin, end)
+    except ValueError:
+        return None

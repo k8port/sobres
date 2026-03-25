@@ -1,0 +1,628 @@
+= Interim Strategy: Sobres MVP Finish Line
+Kate Portalatin <k8@k8port.io>
+v1.1, 2026-03-25
+:icons: font
+:toc: left
+:toclevels: 2
+
+[.lead]
+**Recommended path**: Stop treating onboarding as the gate, and stop treating pre-auth uploads as durable app data. The quickest, clean path to finish is to keep the current Next.js App Router and FastAPI structure, make anonymous upload/parse a disposable draft flow, add a minimal stub user boundary for saved data, and keep the database layer swap-ready to move from SQLite to MySQL once behavior is stable.
+
+[IMPORTANT]
+.Decision Record
+====
+[horizontal]
+Anonymous uploads:: _temporary drafts only -- no DB writes until a user session exists_
+Auth scope:: _stub current-user for MVP; real provider is a later concern_
+Database:: _finish behavior on SQLite; make session config swap-ready for MySQL_
+Onboarding:: _not a gate -- convert to a post-auth progress checklist_
+Out of MVP:: _production auth, durable anonymous accounts, migrations framework_
+====
+
+---
+
+== Phase 0 -- Re-scope Onboarding (No Code)
+
+[.lead]
+**Goal**: Agree on product behavior before touching code. No implementation in this phase.
+
+.Decisions to confirm before Phase 1
+[horizontal]
+Onboarding rule:: App is *fully usable* without completing onboarding. Onboarding prompt
+  only summarizes progress toward "12 months of statements saved." It never blocks navigation.
+Draft rule:: Anonymous users may upload and parse statements to review extracted transactions.
+  That work is intentionally disposable -- no DB rows written.
+Saved rule:: Durable state (uploads, transactions, envelope assignments, onboarding progress)
+  is created only when a stub-authenticated user session exists.
+Navigation rule:: `NavMenu` is always rendered once upload/parse has succeeded at least once.
+  Onboarding completion does not gate it.
+
+
+== Phase 1 -- Write Failing Tests First (TDD Red)
+
+[.lead]
+[fuchsia]#**Goal**#: _Express new product contract in tests before implementating; 
+all tests should *fail* at first_
+
+=== 1a. MSW Contract -- update test handlers
+
+.File
+`web-ui/__tests__/test-utils/msw/handlers.ts`
+
+.Add following mock routes
+----
+- GET  /api/auth/me            -> 200 { id: 'dev-user-1', name: 'Dev User' }
+- POST /api/transactions       -> 401 when X-User-Id header is absent
+- POST /api/transactions       -> 201 { count: N } when X-User-Id header is present
+- DELETE /api/transactions/:id -> 204
+- PATCH  /api/transactions/:id -> 200 TransactionRow  (envelope assignment)
+----
+
+.Constraints
+* Existing upload parse mock stays unchanged -- parse still allowed anonymously
+* `POST /api/transactions` must return 401 when no `X-User-Id` header present
+
+=== 1b. Frontend Integration -- onboarding behavior
+
+.File
+`web-ui/__tests__/integration/onboarding-flow.integration.spec.tsx`
+
+.Tests to add (all must fail on first run)
+[source,text]
+----
+- "onboarding prompt is visible after anonymous upload"
+- "onboarding prompt is NOT blocking -- nav links are reachable before onboarding completes"
+- "onboarding dismissal persists across remount when user is authenticated"
+- "onboarding progress reflects saved upload ranges from backend, not local state"
+----
+
+=== 1c. Frontend Integration -- upload status messaging
+
+.File
+`web-ui/__tests__/integration/upload-status.integration.spec.tsx`
+
+.Tests to add
+[source,text]
+----
+- "anonymous upload shows draft success message: 'X transactions ready to review'"
+- "authenticated save shows saved success message: 'X transactions saved'"
+- "draft success message does NOT say 'persisted'"
+----
+
+=== 1d. Backend Integration -- draft vs saved persistence
+
+.Files
+`py_backend/tests/integration/test_api/test_upload.py`
+`py_backend/tests/integration/test_api/test_transactions.py`
+
+.Tests to add
+[source,text]
+----
+test_upload.py:
+  - "POST /api/upload without auth header does NOT create Upload row in DB"
+  - "POST /api/upload with X-User-Id header DOES create Upload row in DB"
+
+test_transactions.py:
+  - "POST /api/transactions without auth returns 401"
+  - "POST /api/transactions with X-User-Id saves rows scoped to that user"
+  - "GET /api/transactions returns only rows for current user"
+  - "PATCH /api/transactions/:id sets envelopeId; 409 for deposit rows"
+  - "DELETE /api/transactions/:id returns 204 and removes row"
+----
+
+=== 1e. Verify all Phase 1 tests fail
+
+.Commands
+[source,bash]
+----
+cd web-ui && pnpm run test -- --reporter=verbose 2>&1 | grep -E "FAIL|PASS"
+cd py_backend && PYTHONPATH=. pytest tests/integration/ -v 2>&1 | grep -E "PASSED|FAILED|ERROR"
+----
+
+Expected: new tests fail, existing tests still pass. Fix any regressions before continuing.
+
+== Phase 2 -- Backend: Session Config + User Model (Green)
+
+[.lead]
+**Goal**: Establish the minimal backend data model and auth boundary that Phases 3 and 4 depend on.
+Run `PYTHONPATH=. pytest -q` after each sub-step.
+
+=== 2a. Make session.py env-driven and MySQL-ready
+
+.File
+`py_backend/app/db/session.py`
+
+.Change
+[source,python]
+----
+import os
+DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{BASE_DIR}/budget.db")
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+----
+
+.Verify
+[source,bash]
+----
+cd py_backend && PYTHONPATH=. pytest -q
+----
+
+=== 2b. Add User model and user_id foreign keys
+
+.File
+`py_backend/app/db/models.py`
+
+.Add User model
+[source,python]
+----
+class User(Base):
+    __tablename__ = "user"
+    id   = Column(String, primary_key=True)
+    name = Column(String, nullable=False)
+----
+
+.Add user_id column to Upload, Transaction, Envelope, Category
+[source,python]
+----
+user_id = Column(String, ForeignKey("user.id"), nullable=True, index=True)
+----
+
+NOTE: `nullable=True` avoids breaking existing dev data on startup. Tighten after MVP.
+
+.Verify
+[source,bash]
+----
+cd py_backend && PYTHONPATH=. pytest -q
+----
+
+=== 2c. Add stub current-user dependency
+
+.New file: `py_backend/app/api/auth.py`
+
+[source,python]
+----
+from fastapi import Header, HTTPException, Depends
+from sqlalchemy.orm import Session
+from app.db.models import User
+from app.db.session import get_db
+
+DEV_USER_ID   = "dev-user-1"
+DEV_USER_NAME = "Dev User"
+
+def get_current_user(
+    x_user_id: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+) -> User | None:
+    """MVP stub: X-User-Id header is the identity. Replace with JWT later."""
+    if not x_user_id:
+        return None
+    user = db.query(User).filter(User.id == x_user_id).first()
+    if not user:
+        user = User(id=x_user_id, name=DEV_USER_NAME)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    return user
+
+def require_user(current_user: User | None = Depends(get_current_user)) -> User:
+    if current_user is None:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return current_user
+----
+
+.Add GET /api/auth/me (in main.py or a new auth router)
+[source,python]
+----
+@router.get("/api/auth/me")
+def me(current_user: User | None = Depends(get_current_user)):
+    if current_user is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return {"id": current_user.id, "name": current_user.name}
+----
+
+=== 2d. Update schemas.py
+
+.File
+`py_backend/app/db/schemas.py`
+
+[source,python]
+----
+class TransactionCreate(TransactionBase):
+    upload_id:   str | None = None
+    envelope_id: str | None = None
+    user_id:     str | None = None
+
+class TransactionUpdate(BaseModel):
+    envelope_id: str | None = None
+
+class Transaction(TransactionBase):
+    id:          int
+    upload_id:   str | None
+    envelope_id: str | None
+    user_id:     str | None
+    model_config = ConfigDict(from_attributes=True)
+----
+
+=== 2e. Update conftest.py for user-aware fixtures
+
+.File
+`py_backend/tests/conftest.py`
+
+[source,python]
+----
+import app.db.models   # must come before create_all
+
+@pytest.fixture
+def dev_user(db):
+    from app.db.models import User
+    u = User(id="dev-user-1", name="Dev User")
+    db.add(u)
+    db.commit()
+    return u
+
+@pytest.fixture
+def auth_headers():
+    return {"X-User-Id": "dev-user-1"}
+----
+
+.Verify
+[source,bash]
+----
+cd py_backend && PYTHONPATH=. pytest -q
+----
+
+---
+
+== Phase 3 -- Backend: Split Draft vs Saved Ingestion (Green)
+
+[.lead]
+**Goal**: `POST /api/upload` must not create a DB row for anonymous requests.
+Authenticated requests create the Upload row as before.
+
+=== 3a. Modify upload.py -- gate DB write on auth
+
+.File
+`py_backend/app/api/upload.py`
+
+.Key change to upload_statement
+[source,python]
+----
+from app.api.auth import get_current_user
+
+@router.post("/api/upload", status_code=201)
+async def upload_statement(
+    statement:    Optional[UploadFile] = File(None),
+    file:         Optional[UploadFile] = File(None),
+    db:           Session              = Depends(get_db),
+    current_user                       = Depends(get_current_user),
+):
+    # ... existing validation and extraction ...
+
+    if current_user:
+        # Authenticated only: persist Upload row
+        db_upload = Upload(
+            id=upload_id, filename=upload.filename, received_at=received_at,
+            statement_begin=stmt_begin, statement_end=stmt_end,
+            user_id=current_user.id,
+        )
+        db.add(db_upload)
+        db.commit()
+
+    # Always store bytes in memory for parse step
+    _UPLOAD_STORE[upload_id] = {"filename": upload.filename, "content": contents, ...}
+    return UploadOut(id=upload_id, datetime=received_at)
+----
+
+=== 3b. Modify transactions.py -- add PATCH, DELETE, user scope
+
+.File
+`py_backend/app/api/transactions.py`
+
+[source,python]
+----
+from app.api.auth import get_current_user, require_user
+
+# POST -- require auth; tag rows with user_id
+@router.post("/api/transactions", response_model=SaveOut)
+def create_transactions(
+    transactions: List[TransactionCreate],
+    db:           Session = Depends(get_db),
+    current_user          = Depends(require_user),
+):
+    # existing dedup logic; tag each row: user_id=current_user.id
+
+# GET -- require auth; filter by user
+@router.get("/api/transactions", response_model=List[TransactionSchema])
+def get_transactions(
+    db:           Session = Depends(get_db),
+    current_user          = Depends(require_user),
+):
+    return db.query(Transaction).filter(
+        Transaction.user_id == current_user.id
+    ).order_by(Transaction.date.desc()).all()
+
+# PATCH -- envelope assignment
+@router.patch("/api/transactions/{transaction_id}", response_model=TransactionSchema)
+def patch_transaction(
+    transaction_id: int,
+    update:         TransactionUpdate,
+    db:             Session = Depends(get_db),
+    current_user            = Depends(require_user),
+):
+    tx = db.query(Transaction).filter(
+        Transaction.id == transaction_id,
+        Transaction.user_id == current_user.id,
+    ).first()
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    if tx.category == "deposits":
+        raise HTTPException(status_code=409, detail="Cannot assign envelope to a deposit")
+    tx.envelope_id = update.envelope_id
+    db.commit()
+    db.refresh(tx)
+    return tx
+
+# DELETE
+@router.delete("/api/transactions/{transaction_id}", status_code=204)
+def delete_transaction(
+    transaction_id: int,
+    db:             Session = Depends(get_db),
+    current_user            = Depends(require_user),
+):
+    tx = db.query(Transaction).filter(
+        Transaction.id == transaction_id,
+        Transaction.user_id == current_user.id,
+    ).first()
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    db.delete(tx)
+    db.commit()
+----
+
+=== 3c. Scope /api/uploads/ranges to current user
+
+.File
+`py_backend/app/api/upload.py`
+
+[source,python]
+----
+@router.get("/api/uploads/ranges", response_model=UploadRangesOut)
+def get_upload_ranges(
+    db:           Session = Depends(get_db),
+    current_user          = Depends(require_user),
+):
+    uploads = db.query(Upload).filter(
+        Upload.user_id == current_user.id,
+        Upload.statement_begin.isnot(None),
+        Upload.statement_end.isnot(None),
+    ).order_by(Upload.statement_begin).all()
+    return UploadRangesOut(
+        ranges=[StatementRangeOut(start=u.statement_begin.isoformat(),
+                                  end=u.statement_end.isoformat())
+                for u in uploads]
+    )
+----
+
+=== 3d. Run backend tests
+
+[source,bash]
+----
+cd py_backend && PYTHONPATH=. pytest -q
+----
+
+Expected: Phase 1 backend tests are now green.
+
+---
+
+== Phase 4 -- Frontend: Auth Provider + Draft/Save Split (Green)
+
+[.lead]
+**Goal**: Lightweight auth context, draft-vs-saved messaging, and onboarding flag fix.
+Run `pnpm run test` after each sub-step.
+
+=== 4a. Add AuthContext + useAuth hook
+
+.New file: `web-ui/app/lib/context/AuthContext.tsx`
+
+[source,tsx]
+----
+'use client';
+import { createContext, useContext, useEffect, useState } from 'react';
+
+interface AuthUser { id: string; name: string }
+interface AuthContextValue { user: AuthUser | null; isLoadingAuth: boolean }
+
+const AuthContext = createContext<AuthContextValue>({ user: null, isLoadingAuth: true });
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+    const [user, setUser]             = useState<AuthUser | null>(null);
+    const [isLoadingAuth, setLoading] = useState(true);
+    useEffect(() => {
+        fetch('/api/auth/me')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => { setUser(data); setLoading(false); })
+            .catch(() => setLoading(false));
+    }, []);
+    return (
+        <AuthContext.Provider value={{ user, isLoadingAuth }}>
+            {children}
+        </AuthContext.Provider>
+    );
+}
+export const useAuth = () => useContext(AuthContext);
+----
+
+.Wrap body in app/layout.tsx with <AuthProvider>
+
+=== 4b. Add /api/auth/me Next.js proxy route
+
+.New file: `web-ui/app/api/auth/me/route.ts`
+
+[source,ts]
+----
+import { NextRequest, NextResponse } from 'next/server';
+const BACKEND = process.env.BACKEND_URL ?? 'http://localhost:8000';
+export async function GET(req: NextRequest) {
+    const res = await fetch(`${BACKEND}/api/auth/me`, {
+        headers: Object.fromEntries(req.headers),
+    });
+    return NextResponse.json(res.ok ? await res.json() : null, { status: res.status });
+}
+----
+
+=== 4c. Add MSW handler for /api/auth/me
+
+.File
+`web-ui/__tests__/test-utils/msw/handlers.ts`
+
+[source,ts]
+----
+http.get('/api/auth/me', () =>
+    HttpResponse.json({ id: 'dev-user-1', name: 'Dev User' }, { status: 200 })
+),
+----
+
+=== 4d. Change page.tsx behavior
+
+.File
+`web-ui/app/page.tsx`
+
+.Changes (preserve existing JSX structure)
+* Remove `setOnboardingFlag(true)` call inside `handleUpload`.
+* Draft success message (when `user` is null): _"X transactions ready to review"_.
+* Saved success message (when `user` is non-null): _"X transactions saved"_.
+* Remove `navEnabled` gate -- always render `<NavMenu>` once rows are present.
+* Render `<OnboardingPrompt>` only when `user` is non-null and `!coverage.complete`.
+
+=== 4e. Fix useOnboardingFlag.ts
+
+.File
+`web-ui/app/lib/hooks/useOnboardingFlag.ts`
+
+.Two changes
+[source,ts]
+----
+// 1. Call getInitial() so localStorage is read on mount:
+const [isOnboarding, setIsOnboarding] = useState<boolean>(() => getInitial());
+
+// 2. Persist on every change:
+useEffect(() => {
+    try { localStorage.setItem(KEY, String(isOnboarding)); } catch {}
+}, [isOnboarding]);
+----
+
+=== 4f. Run frontend tests
+
+[source,bash]
+----
+cd web-ui && pnpm run test -- --reporter=verbose
+----
+
+Expected: Phase 1 frontend tests are now green.
+
+---
+
+== Phase 5 -- DB Portability Smoke Test
+
+[.lead]
+**Goal**: Confirm the app boots and tests pass with an overridden `DATABASE_URL`.
+No code changes.
+
+=== 5a. SQLite (baseline -- must pass)
+
+[source,bash]
+----
+cd py_backend && PYTHONPATH=. pytest -q
+----
+
+=== 5b. MySQL (optional at this stage)
+
+[source,bash]
+----
+pip install mysqlclient
+DATABASE_URL="mysql+mysqlclient://user:pass@localhost/sobres" PYTHONPATH=. pytest -q
+----
+
+NOTE: If MySQL is not yet available, mark deferred. The session.py change from Phase 2a
+guarantees the path works once MySQL is provisioned.
+
+---
+
+== Phase 6 -- E2E Coverage
+
+[.lead]
+**Goal**: Two Playwright flows protecting the core contract.
+Add after Phases 2-4 are fully green.
+
+=== 6a. Anonymous draft flow
+
+.New file: `web-ui/__tests__/e2e/anonymous-draft.spec.ts`
+
+[source,text]
+----
+1. Navigate to home (no auth header)
+2. Upload one PDF
+3. Assert draft message: "X transactions ready to review"
+4. Assert "persisted" is NOT in the success message
+5. Reload page
+6. Assert transactions table is empty (no durable state)
+7. Assert onboarding prompt is NOT visible
+----
+
+=== 6b. Authenticated save flow
+
+.New file: `web-ui/__tests__/e2e/authenticated-save.spec.ts`
+
+[source,text]
+----
+1. Intercept requests and inject X-User-Id: dev-user-1
+2. Upload one PDF
+3. Assert saved message: "X transactions saved"
+4. Assign an envelope to one transaction
+5. Reload
+6. Assert the same transaction still shows the assigned envelope
+7. Assert onboarding prompt reflects correct month coverage
+8. Assert NavMenu links are visible regardless of onboarding progress
+----
+
+=== 6c. Run E2E suite
+
+[source,bash]
+----
+cd web-ui && pnpm run test:e2e
+----
+
+---
+
+== Verification Checklist
+
+[cols="1,3,1", options="header"]
+|===
+| # | Check | Status
+
+| 1
+| `cd web-ui && pnpm run test` -- all integration tests green, including new Phase 1 tests
+| [ ]
+
+| 2
+| `cd py_backend && PYTHONPATH=. pytest -q` -- all backend tests green
+| [ ]
+
+| 3
+| Manual anonymous check: upload PDF, reload/restart backend -- no saved DB rows, no onboarding progress
+| [ ]
+
+| 4
+| Manual authenticated check: upload as dev-user-1, reload -- rows, ranges, and envelope assignments persist
+| [ ]
+
+| 5
+| Both SQLite and MySQL DATABASE_URL boot app without code changes
+| [ ]
+
+| 6
+| `pnpm run test:e2e` -- anonymous-draft and authenticated-save flows pass
+| [ ]
+|===

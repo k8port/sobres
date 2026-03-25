@@ -7,6 +7,8 @@ import { computeDateCoverage } from '@/app/lib/dateCoverage';
 import { useUploadAndParse } from '@/app/lib/hooks/useUploadAndParse';
 import { useEditableNotes } from '@/app/lib/hooks/useEditableNotes';
 import { setCachedRows } from '@/app/lib/transactionsCache';
+import { fetchSavedStatementRanges } from '@/app/api/uploads/service';
+import type { StatementRange } from '@/app/lib/statementCoverage';
 
 import Logo from '@/app/ui/Logo';
 import OnboardingPrompt from '@/app/ui/OnboardingPrompt';
@@ -26,10 +28,18 @@ export default function Home() {
     const { save, isSaving, saveError, saveSuccess } = useSaveTransactions(rows);
     const { notesById, setNote, withNotes } = useEditableNotes(rows);
     const [displayRows, setDisplayRows] = useState(rows);
+    const [savedRanges, setSavedRanges] = useState<StatementRange[]>([]);
 
     useEffect(() => {
         setDisplayRows(rows);
     }, [rows]);
+
+    // Fetch saved statement ranges from backend on mount
+    useEffect(() => {
+        fetchSavedStatementRanges()
+            .then(setSavedRanges)
+            .catch(() => {});
+    }, []);
 
     const onDeleteTransaction = async (id: string | number) => {
         const strId = String(id);
@@ -58,6 +68,9 @@ export default function Home() {
         try {
             await run(files);
             setOnboardingFlag(true);
+            // Re-fetch saved ranges from backend now that uploads are persisted
+            const ranges = await fetchSavedStatementRanges();
+            setSavedRanges(ranges);
             // Show success notification after parsing completes
             setUploadSuccess({
                 statementCount: files.length,
@@ -75,9 +88,14 @@ export default function Home() {
         setUploadSuccess(null);
     };
 
-    const transactionDates = rows.map((r: any) => r.date as string);
-    const coverage = computeDateCoverage(transactionDates);
+    const coverage = computeDateCoverage([], savedRanges);
     const navEnabled = coverage.complete;
+
+    useEffect(() => {
+        if (coverage.complete && isOnboarding) {
+            setOnboardingFlag(false);
+        }
+    }, [coverage.complete, isOnboarding, setOnboardingFlag]);
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-linear-to-b from-crayolablue to-aquamarine">
@@ -90,7 +108,7 @@ export default function Home() {
             </h2>
 
             {navEnabled && <NavMenu enabled={navEnabled} />}
-            {isOnboarding && <OnboardingPrompt dates={transactionDates} />}
+            {isOnboarding && <OnboardingPrompt statementRanges={savedRanges} />}
 
             <form className="bg-white mt-6 p-8 shadow-md rounded space-y-4 w-full max-w-md">
                 <label htmlFor="file" className="block text-sm font-medium text-gray-700">
@@ -102,11 +120,11 @@ export default function Home() {
                     multiple
                     onChange={handleFileChange}
                     id="file"
-                    className="block w-full text-sm text-gray-900 border border-gray-300 rounded cursor-pointer p-2"
+                    className="block w-full text-sm text-gunmetal border border-templetongray rounded cursor-pointer p-2"
                 />
 
                 {files.length > 0 && (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-fog">
                         Selected: {files.map(f => f.name).join(', ')}
                     </p>
                 )}
@@ -114,7 +132,7 @@ export default function Home() {
                 <button
                     type="button"
                     onClick={handleUpload}
-                    className="mt-2 w-full bg-blue-600 text-white py-2 px-4 rounded cursor-pointer hover:bg-blue-700 disabled:opacity-50 disabled:cursor-none"
+                    className="mt-2 w-full bg-robineggblue text-pomelowhite font-bold py-2 px-4 rounded cursor-pointer hover:bg-pacificblue disabled:opacity-50 disabled:cursor-none"
                     disabled={parseStatus === 'parsing' || isUploading || files.length === 0}
                 >
                     {isUploading
@@ -125,14 +143,14 @@ export default function Home() {
                 </button>
 
                 {uploadError && (
-                    <div className="mt-6 w-full max-w-md bg-red-50 text-red-700 p-4 rounded border border-red-200">
+                    <div className="mt-6 w-full max-w-md bg-rosewhite text-angelsred p-4 rounded border border-lightcopperorange">
                         <p className="font-semibold">Upload Error</p>
                         <p className="text-sm">{uploadError}</p>
                     </div>
                 )}
 
                 {parseError && (
-                    <div className="mt-6 w-full max-w-md bg-red-50 text-red-700 p-4 rounded border border-red-200">
+                    <div className="mt-6 w-full max-w-md bg-rosewhite text-angelsred p-4 rounded border border-lightcopperorange">
                         <p className="font-semibold">Parse Error</p>
                         <p className="text-sm">{parseError}</p>
                     </div>
@@ -141,7 +159,7 @@ export default function Home() {
 
             {/* Success notification showing statements uploaded and transactions parsed */}
             {uploadSuccess && rows && rows.length > 0 && (
-                <div className="mt-4 w-full max-w-md bg-green-50 text-green-700 p-4 rounded border border-green-200">
+                <div className="mt-4 w-full max-w-md bg-pomelowhite text-marengo p-4 rounded border border-menthol">
                     <p className="font-semibold">Upload Successful</p>
                     <p className="text-sm mt-2">
                         ✓ {uploadSuccess.statementCount} statement
@@ -163,15 +181,15 @@ export default function Home() {
                                 role="button"
                                 onClick={handleSave}
                                 disabled={isSaving}
-                                className="bg-blue-600 text-white py-2 px-4 rounded cursor-pointer hover:bg-blue-700 disabled:opacity-50 disabled:cursor-none"
+                                className="bg-robineggblue text-rosewhite py-2 px-4 rounded cursor-pointer hover:bg-pacificblue disabled:opacity-50 disabled:cursor-none"
                             >
                                 {isSaving ? 'Updating...' : 'Update Transactions'}
                             </button>
                             {saveSuccess && (
-                                <p className="mt-2 text-sm text-green-600">{saveSuccess}</p>
+                                <p className="mt-2 text-sm text-screamingreen">{saveSuccess}</p>
                             )}
                             {saveError && (
-                                <div className="mt-2 bg-red-50 text-red-700 p-3 rounded border border-red-200">
+                                <div className="mt-2 bg-rosewhite text-angelsred p-3 rounded border border-lightcopperorange">
                                     <p className="text-sm font-semibold">Save Error</p>
                                     <p className="text-sm">{saveError}</p>
                                 </div>

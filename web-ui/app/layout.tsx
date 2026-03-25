@@ -1,4 +1,4 @@
-import "./styles/globals.css" assert { type: "css" };
+import "@/app/styles/globals.css";
 import { lobster, opensans, slackey, inter } from "./styles/fonts";
 
 export default function RootLayout({

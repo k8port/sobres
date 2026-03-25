@@ -1,5 +1,6 @@
 import { vi, it, expect, beforeEach, describe } from 'vitest';
 import { uploadStatement, uploadStatements } from '@/app/api/upload/service';
+import { fetchSavedStatementRanges } from '@/app/api/uploads/service';
 import { ___resetMswData, lastUploadCount } from '@/__tests__/test-utils/msw/handlers';
 
 beforeEach(() => {
@@ -56,5 +57,24 @@ describe('bulk upload service', () => {
         expect(results).toHaveLength(2);
         expect(results[0].id).toBe('u-bulk-1');
         expect(results[1].id).toBe('u-bulk-2');
+    });
+});
+
+describe('fetchSavedStatementRanges', () => {
+    it('fetches with cache: no-store to prevent stale responses', async () => {
+        const fetchSpy = vi.fn(async () => {
+            return new Response(
+                JSON.stringify({ ranges: [{ start: '2025-03-08', end: '2025-04-07' }] }),
+                { status: 200, headers: { 'Content-Type': 'application/json' } }
+            );
+        });
+        vi.stubGlobal('fetch', fetchSpy as any);
+
+        const result = await fetchSavedStatementRanges();
+
+        expect(fetchSpy).toHaveBeenCalledWith('/api/uploads/ranges', expect.objectContaining({
+            cache: 'no-store',
+        }));
+        expect(result).toEqual([{ start: '2025-03-08', end: '2025-04-07' }]);
     });
 });

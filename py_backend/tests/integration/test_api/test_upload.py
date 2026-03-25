@@ -47,3 +47,60 @@ def test_upload_of_non_pdf_returns_400():
 def test_parse_invalid_upload_id_returns_400():
     response = client.post('/api/upload/parse', params={'uploadId': 'bogus'})
     assert response.status_code == 400
+
+
+def test_upload_extracts_statement_period_at_upload_time(db):
+    """POST /api/upload should extract and save the statement period from the PDF
+    immediately — not deferred to the parse step.
+    """
+    from unittest.mock import patch
+    from datetime import date as dtdate
+    from app.db.models import Upload
+
+    mock_text = "KATECPORTALATIN StatementPeriod: Jan082026-Feb072026\nother content"
+
+    with patch('app.api.upload.extract_pdf_content', return_value={'text': mock_text}):
+        import io
+        pdf = io.BytesIO(b'%PDF-1.4 dummy')
+        files = {'file': ("jan_2026.pdf", pdf, "application/pdf")}
+        response = client.post('/api/upload', files=files)
+
+    assert response.status_code == 201
+    uid = response.json()['id']
+
+    upload = db.query(Upload).filter(Upload.id == uid).first()
+    assert upload is not None
+    assert upload.statement_begin == dtdate(2026, 1, 8), f"Expected 2026-01-08 but got {upload.statement_begin}"
+    assert upload.statement_end == dtdate(2026, 2, 7), f"Expected 2026-02-07 but got {upload.statement_end}"
+
+
+def test_parse_saves_statement_range_from_statement_period(db):
+    """After parsing, the Upload record should have statement_begin and statement_end set
+    based on the StatementPeriod extracted from the PDF text header — not from transactions.
+    """
+    from unittest.mock import patch
+    from datetime import date as dtdate
+    from app.db.models import Upload
+
+    import io
+    pdf = io.BytesIO(b'%PDF-1.4 dummy')
+    files = {'file': ("jan_2026.pdf", pdf, "application/pdf")}
+    uploaded = client.post('/api/upload', files=files)
+    assert uploaded.status_code == 201
+    uid = uploaded.json()['id']
+
+    # Mock PDF extraction to return text with StatementPeriod header
+    mock_text = "KATECPORTALATIN StatementPeriod: Jan082026-Feb072026\nother content"
+
+    with patch('app.api.upload.extract_pdf_content', return_value={'text': mock_text}), \
+         patch('app.api.upload.get_statement_rows', return_value=[]), \
+         patch('app.api.upload.get_transactions', return_value=[]):
+        response = client.post('/api/upload/parse', params={'uploadId': uid})
+
+    assert response.status_code == 200
+
+    # Verify statement range was saved from the PDF header, not from transactions
+    upload = db.query(Upload).filter(Upload.id == uid).first()
+    assert upload is not None
+    assert upload.statement_begin == dtdate(2026, 1, 8), f"Expected 2026-01-08 but got {upload.statement_begin}"
+    assert upload.statement_end == dtdate(2026, 2, 7), f"Expected 2026-02-07 but got {upload.statement_end}"
