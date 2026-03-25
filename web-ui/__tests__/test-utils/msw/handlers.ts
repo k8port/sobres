@@ -23,6 +23,11 @@ let patchCounter = 0;
 export let lastUploadCount = 0;
 export function clearUploadCaptured() { lastUploadCount = 0; }
 
+let savedUploadRanges: Array<{ start: string; end: string }> = [];
+export function ___setSavedUploadRanges(ranges: Array<{ start: string; end: string }>) {
+    savedUploadRanges = ranges;
+}
+
 let lastTransactionsBody: any = null;
 export function clearCaptured() { lastTransactionsBody = null; }
 export const ___getLastTransactionsBody = () => lastTransactionsBody;
@@ -110,6 +115,13 @@ export const handlers = [
 
         // 204 is typical for delete
         return new HttpResponse(null, { status: 204 });
+    }),
+    /* ******************** Upload Ranges *********************** */
+    http.get('/api/uploads/ranges', () => {
+        return HttpResponse.json({ ranges: savedUploadRanges });
+    }),
+    http.get(`${BACKEND_URL}/api/uploads/ranges`, () => {
+        return HttpResponse.json({ ranges: savedUploadRanges });
     }),
     /* ******************** Uploads *********************** */   
     /* NextJS proxy upload handler - forwards to backend */
@@ -218,6 +230,7 @@ export function ___getPatchCount() {
 export function ___resetMswData() {
     patchCounter = 0;
     lastUploadCount = 0;
+    savedUploadRanges = [];
     
     envelopes = [
         { id: 'env_1', name: 'Rent' },

@@ -2,48 +2,119 @@
 
 import { render, screen } from '@testing-library/react';
 import OnboardingPrompt from '@/app/ui/OnboardingPrompt';
-import { it, expect, vi, beforeAll, afterAll } from 'vitest';
+import { it, expect, vi, beforeAll, afterAll, describe } from 'vitest';
 
 beforeAll(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-03-10T00:00:00Z'));
+    vi.setSystemTime(new Date('2026-03-15T00:00:00Z'));
 });
 afterAll(() => {
     vi.useRealTimers();
 });
 
-it('displays progress bar with subtitle when dates have partial coverage', () => {
-    // Only January 2025 dates → partial coverage
-    const dates: string[] = [];
-    for (let d = 1; d <= 31; d++) {
-        dates.push(`2025-01-${String(d).padStart(2, '0')}`);
-    }
-    render(<OnboardingPrompt dates={dates} />);
+describe('progress bar basics', () => {
+    it('returns null when full year is covered by statement ranges', () => {
+        const ranges = [
+            { start: '2025-03-08', end: '2025-04-07' },
+            { start: '2025-04-08', end: '2025-05-07' },
+            { start: '2025-05-08', end: '2025-06-07' },
+            { start: '2025-06-08', end: '2025-07-07' },
+            { start: '2025-07-08', end: '2025-08-07' },
+            { start: '2025-08-08', end: '2025-09-07' },
+            { start: '2025-09-08', end: '2025-10-07' },
+            { start: '2025-10-08', end: '2025-11-07' },
+            { start: '2025-11-08', end: '2025-12-07' },
+            { start: '2025-12-08', end: '2026-01-07' },
+            { start: '2026-01-08', end: '2026-02-07' },
+            { start: '2026-02-08', end: '2026-03-07' },
+        ];
+        const { container } = render(<OnboardingPrompt statementRanges={ranges} />);
+        expect(container.innerHTML).toBe('');
+    });
 
-    expect(screen.getByRole('progressbar')).toBeDefined();
-    expect(screen.getByText(/upload primary account statements/i)).toBeDefined();
+    it('shows 0% progress when no statement ranges exist', () => {
+        render(<OnboardingPrompt statementRanges={[]} />);
+
+        const bar = screen.getByRole('progressbar');
+        expect(bar.getAttribute('title')).toBe('0% complete');
+    });
 });
 
-it('shows uncovered date ranges as gap messages', () => {
-    // Only January 2025 → gap from Feb 1 - Dec 31
-    const dates: string[] = [];
-    for (let d = 1; d <= 31; d++) {
-        dates.push(`2025-01-${String(d).padStart(2, '0')}`);
-    }
-    render(<OnboardingPrompt dates={dates} />);
+describe('before any uploads (no ranges)', () => {
+    it('shows coverage window range text instead of missing periods list', () => {
+        render(<OnboardingPrompt statementRanges={[]} />);
 
-    expect(screen.getByText(/2025-02-01/)).toBeDefined();
-    expect(screen.getByText(/2025-12-31/)).toBeDefined();
+        // Should show the full window range
+        expect(
+            screen.getByText(/upload.*statements.*covering.*March 8, 2025.*March 7, 2026/i)
+        ).toBeDefined();
+
+        // Should NOT show any missing period list items
+        expect(screen.queryAllByRole('listitem')).toHaveLength(0);
+    });
 });
 
-it('returns null when full year is covered', () => {
-    const dates: string[] = [];
-    for (let m = 1; m <= 12; m++) {
-        const daysInMonth = new Date(2025, m, 0).getDate();
-        for (let d = 1; d <= daysInMonth; d++) {
-            dates.push(`2025-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
-        }
-    }
-    const { container } = render(<OnboardingPrompt dates={dates} />);
-    expect(container.innerHTML).toBe('');
+describe('after uploads (has ranges) — missing periods shown', () => {
+    it('shows 11 individual missing statement periods when only Mar 8-Apr 7 is covered', () => {
+        render(<OnboardingPrompt statementRanges={[{ start: '2025-03-08', end: '2025-04-07' }]} />);
+
+        const items = screen.getAllByRole('listitem');
+        expect(items).toHaveLength(11);
+        expect(items[0].textContent).toContain('2025-04-08');
+        expect(items[0].textContent).toContain('2025-05-07');
+        expect(items[10].textContent).toContain('2026-02-08');
+        expect(items[10].textContent).toContain('2026-03-07');
+    });
+
+    it('lists 9 missing statement periods when Dec-Feb ranges cover only 3 months', () => {
+        render(
+            <OnboardingPrompt
+                statementRanges={[
+                    { start: '2025-12-08', end: '2026-01-07' },
+                    { start: '2026-01-08', end: '2026-02-07' },
+                    { start: '2026-02-08', end: '2026-03-07' },
+                ]}
+            />
+        );
+
+        const items = screen.getAllByRole('listitem');
+        expect(items).toHaveLength(9);
+
+        expect(items[0].textContent).toContain('2025-03-08');
+        expect(items[0].textContent).toContain('2025-04-07');
+
+        expect(items[8].textContent).toContain('2025-11-08');
+        expect(items[8].textContent).toContain('2025-12-07');
+    });
+
+    it('lists specific 9 missing periods matching the user scenario (Jan/Feb/Mar 2026 uploaded)', () => {
+        render(
+            <OnboardingPrompt
+                statementRanges={[
+                    { start: '2025-12-08', end: '2026-01-07' },
+                    { start: '2026-01-08', end: '2026-02-07' },
+                    { start: '2026-02-08', end: '2026-03-07' },
+                ]}
+            />
+        );
+
+        const items = screen.getAllByRole('listitem');
+        expect(items).toHaveLength(9);
+
+        const expectedPeriods = [
+            { start: '2025-03-08', end: '2025-04-07' },
+            { start: '2025-04-08', end: '2025-05-07' },
+            { start: '2025-05-08', end: '2025-06-07' },
+            { start: '2025-06-08', end: '2025-07-07' },
+            { start: '2025-07-08', end: '2025-08-07' },
+            { start: '2025-08-08', end: '2025-09-07' },
+            { start: '2025-09-08', end: '2025-10-07' },
+            { start: '2025-10-08', end: '2025-11-07' },
+            { start: '2025-11-08', end: '2025-12-07' },
+        ];
+        expectedPeriods.forEach((period, i) => {
+            expect(items[i].textContent).toContain(period.start);
+            expect(items[i].textContent).toContain(period.end);
+        });
+    });
 });

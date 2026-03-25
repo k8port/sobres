@@ -78,6 +78,7 @@ def get_transactions(rows_raw: List[Dict[str, str]]) -> List[Dict[str, Any]]:
         - `amount`: float (debits negative, credits positive)
     """
     transactions = []
+    today = datetime.now().date()
     for row in rows_raw:
         # adjust keys to match bank statement format
         date_str = row.get("Date") or row.get("date") or row.get("POSTINGDATE")
@@ -99,8 +100,11 @@ def get_transactions(rows_raw: List[Dict[str, str]]) -> List[Dict[str, Any]]:
                 date_mod = datetime.strptime(date_str.strip(), "%m/%d/%Y").date()
                 transaction['date'] = date_mod
             except ValueError:
-                year = datetime.now().year - 1
-                date_mod = datetime.strptime(f"{date_str.strip()}/{year}", "%m/%d/%Y").date()
+                # For mm/dd rows without explicit year, map to current year unless
+                # that would place the transaction in the future, then roll back one year.
+                date_mod = datetime.strptime(f"{date_str.strip()}/{today.year}", "%m/%d/%Y").date()
+                if date_mod > today:
+                    date_mod = date_mod.replace(year=date_mod.year - 1)
                 transaction['date'] = date_mod
         except Exception as e:
             logger.error('Invalid date', date_str, e)

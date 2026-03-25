@@ -65,3 +65,13 @@ class Envelope(Base):
     balance = Column(Float, default=0.0)
 
     category = relationship("Category", back_populates="envelope")
+
+
+class Upload(Base):
+    __tablename__ = "upload"
+
+    id = Column(String, primary_key=True, index=True)
+    filename = Column(String, nullable=True)
+    received_at = Column(String, nullable=False)
+    statement_begin = Column(Date, nullable=True)
+    statement_end = Column(Date, nullable=True)

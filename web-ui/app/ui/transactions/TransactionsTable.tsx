@@ -66,8 +66,8 @@ export default function TransactionsTable({
     return (
         <div className="mt-10 w-full max-w-4xl bg-white shadow rounded p-4 overflow-auto">
             <h2 className="text-lg font-semibold mb-2">Transactions</h2>
-            <table className="min-w-full text-sm text-left text-gray-700 divide-y divide-gray-200">
-                <thead className="bg-gray-200">
+            <table className="min-w-full text-sm text-left text-porpoise divide-y divide-cadetgray">
+                <thead className="bg-cadetgray">
                     <tr>
                         {baseKeys.map(key => (
                             <th key={`col-${key}`} className="px-4 py-2 text-xs border-b">
@@ -96,7 +96,7 @@ export default function TransactionsTable({
                     </tr>
                 </thead>
 
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-greekvilla divide-y divide-cadetgray">
                     {rows.map((row, i) => {
                         const isPayment = String(row.cat ?? '') === 'payments';
                         const rowId = row.id as string | number | undefined;
@@ -113,7 +113,7 @@ export default function TransactionsTable({
                         console.log('compositeKey', compositeKey);
 
                         return (
-                            <tr key={compositeKey} className="even:bg-gray-50">
+                            <tr key={compositeKey} className="even:bg-lavendargray">
                                 {baseKeys.map(k => (
                                     <td
                                         key={`cell-${compositeKey}-${k}`}
@@ -132,7 +132,7 @@ export default function TransactionsTable({
                                 )}
 
                                 {showCompositeKeyColumn && (
-                                    <td className="px-4 py-2 whitespace-nowrap border-b text-xs text-gray-600">
+                                    <td className="px-4 py-2 whitespace-nowrap border-b text-xs text-porpoise">
                                         {compositeKey}
                                     </td>
                                 )}

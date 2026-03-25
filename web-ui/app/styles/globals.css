@@ -32,7 +32,19 @@
     --color-halfnhalf: oklch(0.99 0.0351 107.02);
     --color-lightyellow: oklch(0.99 0.0402 107.11);
     --color-pomelowhite: oklch(0.99 0.037 116.91);
-    --color-marengo: oklch(0.46 0.0275 252.4);
+    --color-lavendargray: oklch(0.8219 0.018 289.54); /* text-gray-50 */
+    --color-mistygray: oklch(0.8093 0.0067 197.02) ; /* text-gray-100 */
+    --color-cadetgray: oklch(0.7057 0.0278 239.25); /* text-gray-200 */
+    --color-templetongray: oklch(0.6113 0.0175 196.7); /* text-gray-300 */
+    --color-nevada: oklch(0.5218 0.0068 239.92); /* text-gray-400 */
+    --color-fog: oklch(0.4805 0.0267 321.42); /* text-gray-500 */
+    --color-marengo: oklch(0.46 0.0275 252.4); /* text-gray-600 */
+    --color-porpoise: oklch(0.426 0.0247 285.31); /* text-gray-700 */
+    --color-anchor: oklch(0.3788 0.0163 266.5) ; /* text-gray-800 */
+    --color-gunmetal: oklch(0.3178 0.0162 229.54) ; /* text-gray-900 */
+    --color-angelsred: oklch(0.4974 0.201165 23.9526); /* text-red-700 */
+    --color-madderred: oklch(0.4557 0.183755 22.4764); /* text-red-800 */
+    --color-darkred: oklch(0.3999 0.1641 29.23); /* text-red-900 */
 }
 
 @theme {
@@ -60,4 +72,21 @@
         border: 0 solid var(--color-brand-primary);
     }
 
+
+      .progress-themed {
+          appearance: none;
+          -webkit-appearance: none;
+      }
+
+      .progress-themed::-webkit-progress-bar {
+          background-color: var(--color-cadetgray);
+      }
+
+      .progress-themed::-webkit-progress-value {
+          background-color: var(--color-screamingreen);
+      }
+
+      .progress-themed::-moz-progress-bar {
+          background-color: var(--color-screamingreen);
+      }
 }
