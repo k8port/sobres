@@ -7,8 +7,17 @@ vi.mock('next/navigation', () => ({
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
 import Home from '@/app/page';
-import { test, expect, afterAll, afterEach, vi } from 'vitest';
+import { test, expect, describe, beforeEach, afterAll, afterEach, vi } from 'vitest';
+import { server } from '@/__tests__/test-utils/msw/server';
+import { ___setSavedUploadRanges } from '@/__tests__/test-utils/msw/handlers';
+
+beforeEach(() => {
+    try {
+        window.localStorage.clear();
+    } catch {}
+});
 
 afterEach(() => {
     vi.restoreAllMocks();
@@ -18,114 +27,99 @@ afterAll(() => {
     pushMock.mockReset();
 });
 
-test('shows previous year upload prompt on landing page', () => {
-    render(<Home />);
-    expect(screen.getByRole('progressbar')).toBeDefined();
-    // Before any uploads, should show window range text, no missing list
-    expect(screen.getByText(/upload.*statements.*covering.*period/i)).toBeDefined();
-    expect(screen.queryAllByRole('listitem')).toHaveLength(0);
-});
+// Removed: 'progress bar increases as statements are added'
+// Encoded the old contract: progressbar visible to anonymous users on landing.
+// Replaced by the four new contract tests below.
 
-test('progress bar increases as statements are added', async () => {
-    let i = 0;
-    vi.spyOn(global, 'fetch').mockImplementation(async url => {
-        if (typeof url === 'string' && url.endsWith('/api/upload')) {
-            i += 1;
-            const month = String(i).padStart(2, '0');
-            return new Response(
-                JSON.stringify({ rows: [{ date: `2024-${month}-20` }], text: `OCR-RAW-${month}` }),
-                { status: 200, headers: { 'Content-Type': 'application/json' } }
-            );
-        }
-        return new Response('Not Found', { status: 404 });
+describe('new contract: onboarding behavior', () => {
+    // Test 1
+    // OnboardingPrompt is post-auth only. Anonymous users must not see it.
+    // FAILs until AuthContext is wired into Home
+    test('onboarding prompt is NOT visible to anonymous users', async () => {
+        // Anonymous session: /api/auth/me returns 401
+        server.use(http.get('/api/auth/me', () => new HttpResponse(null, { status: 401 })));
+
+        render(<Home />);
+
+        // Give any auth-check effects time to settle, then assert no progressbar
+        await waitFor(() => {
+            expect(screen.queryByRole('progressbar')).toBeNull();
+        });
     });
 
-    render(<Home />);
-    const input = screen.getByLabelText(/Upload Account Statement/i);
-    const uploadButton = screen.getByRole('button', { name: /Upload Account Statement/i });
+    // Test 2
+    // NavMenu must render regardless of onboarding completion state.
+    // FAILS until navEnabled gate is removed from Home (Phase 4d).
+    test('onboarding prompt is NOT blocking -- nav links are reachable before onboarding completes', async () => {
+        // Authenticated, but no saved ranges → 0% coverage → onboarding not complete
+        server.use(
+            http.get('/api/auth/me', () =>
+                HttpResponse.json({ id: 'dev-user-1', name: 'Dev User' })
+            )
+        );
 
-    for (let k = 1; k <= 3; k++) {
-        const file = new File(['dummy'], `stmt-${k}.pdf`, { type: 'application/pdf' });
-        fireEvent.change(input, { target: { files: [file] } });
-        fireEvent.click(uploadButton);
+        render(<Home />);
 
-        await waitFor(() => expect(global.fetch).toHaveBeenCalled());
-    }
-
-    await waitFor(() => {
-        const progress = screen.getByRole('progressbar');
-        expect(progress).toBeDefined();
-    });
-});
-
-test('upload endpoint saves raw text; save transactions called as separate action', async () => {
-    const calls: string[] = [];
-    const fetchMock = vi.spyOn(global, 'fetch').mockImplementation(async (url, init) => {
-        if (typeof url === 'string') calls.push(url);
-
-        if (typeof url === 'string' && url.endsWith('api/upload')) {
-            return new Response(
-                JSON.stringify({ rows: [{ date: '2024-01-15' }], text: 'OCR-RAW-TEXT' }),
-                { status: 200, headers: { 'Content-Type': 'application/json' } }
-            );
-        }
-
-        if (typeof url === 'string' && url.endsWith('api/transactions')) {
-            return new Response(JSON.stringify({ success: false }), { status: 403 });
-        }
-
-        return new Response('Not Found', { status: 404 });
+        // NavMenu must be present even though coverage is 0% and onboarding is incomplete
+        await waitFor(() => {
+            expect(screen.getByRole('navigation', { name: /Primary/i })).toBeDefined();
+        });
     });
 
-    render(<Home />);
+    // Test 3
+    // useOnboardingFlag must read localStorage on mount so a previously dismissed
+    // prompt stays dismissed after remount.
+    // FAILs until useState(() => getInitial()) is used in useOnboardingFlag (Phase 4e).
+    test('onboarding dismissal persists across remount when user is authenticated', async () => {
+        // Simulate a prior session where the user dismissed the onboarding prompt
+        window.localStorage.setItem('onboardingFlag', 'false');
 
-    const input = screen.getByLabelText(/Upload Account Statement/i);
-    const uploadButton = screen.getByRole('button', { name: /Upload Account Statement/i });
+        server.use(
+            http.get('/api/auth/me', () =>
+                HttpResponse.json({ id: 'dev-user-1', name: 'Dev User' })
+            )
+        );
 
-    const file = new File(['dummy'], 'bank.pdf', { type: 'application/pdf' });
-    fireEvent.change(input, { target: { files: [file] } });
-    fireEvent.click(uploadButton);
+        const { unmount } = render(<Home />);
 
-    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+        // On first mount, flag is read from localStorage — progressbar must not appear
+        await waitFor(() => {
+            expect(screen.queryByRole('progressbar')).toBeNull();
+        });
 
-    await waitFor(() => {
-        expect(calls.some(u => u.endsWith('api/upload'))).toBe(true);
+        unmount();
+
+        // After remount, localStorage is read again — still dismissed
+        render(<Home />);
+
+        await waitFor(() => {
+            expect(screen.queryByRole('progressbar')).toBeNull();
+        });
     });
 
-    fetchMock.mockRestore();
-});
+    // Test 4
+    // OnboardingPrompt progress must reflect ranges from GET /api/uploads/ranges, not manufactured local state.
+    test('onboarding progress reflects saved upload ranges from backend, not local state', async () => {
+        // Authenticated user with partial backend coverage (2 out of 12 months)
+        server.use(
+            http.get('/api/auth/me', () =>
+                HttpResponse.json({ id: 'dev-user-1', name: 'Dev User' })
+            )
+        );
 
-test('after 12 statement uploads onboarding task is complete', async () => {
-    let i = 0;
-    vi.spyOn(global, 'fetch').mockImplementation(async url => {
-        if (typeof url === 'string' && url.endsWith('/api/upload')) {
-            i += 1;
-            const month = String(i).padStart(2, '0');
-            return new Response(
-                JSON.stringify({
-                    rows: [{ date: `2024-${month}-20` }],
-                    text: `OCR-RAW-${month}`,
-                }),
-                { status: 200, headers: { 'Content-Type': 'application/json' } }
-            );
-        }
-        return new Response('Not Found', { status: 404 });
-    });
+        ___setSavedUploadRanges([
+            { start: '2025-03-08', end: '2025-04-07' },
+            { start: '2025-04-08', end: '2025-05-07' },
+        ]);
 
-    render(<Home />);
-    const input = screen.getByLabelText(/Upload Account Statement/i);
-    const uploadButton = screen.getByRole('button', { name: /Upload Account Statement/i });
+        render(<Home />);
 
-    // simulate 12 uploads
-    for (let i = 0; i < 12; i++) {
-        const file = new File(['dummy'], `stmt-${i}.pdf`, { type: 'application/pdf' });
-        fireEvent.change(input, { target: { files: [file] } });
-        fireEvent.click(uploadButton);
-        await waitFor(() => expect(global.fetch).toHaveBeenCalled());
-    }
-
-    await waitFor(() => {
-        expect(screen.getByRole('progressbar')).toBeDefined();
+        // Progress bar value must be > 0 (ranges present) and < 100 (not fully covered)
+        await waitFor(() => {
+            const bar = screen.getByRole('progressbar') as HTMLProgressElement;
+            expect(Number(bar.value)).toBeGreaterThan(0);
+            expect(Number(bar.value)).toBeLessThan(100);
+        });
     });
 });
 
@@ -218,7 +212,7 @@ test('dec-to-mar uploads show about 25% completion and missing march-to-dec rang
         }
 
         if (url.includes('/api/upload/parse')) {
-            const parsed = new URL(url, 'http://localhost:8000');
+            const parsed = new URL(url.toString(), 'http://localhost:8000');
             const uploadId = parsed.searchParams.get('uploadId') ?? '';
             completedUploads.push(uploadId);
             return new Response(JSON.stringify({ rows: parseRowsByUpload[uploadId] ?? [] }), {
@@ -269,8 +263,6 @@ test('dec-to-mar uploads show about 25% completion and missing march-to-dec rang
             expect(items[8].textContent).toContain('2025-11-08');
             expect(items[8].textContent).toContain('2025-12-07');
         });
-
-        expect(screen.queryByRole('navigation', { name: /Primary/i })).toBeNull();
     } finally {
         fetchMock.mockRestore();
     }
@@ -278,7 +270,12 @@ test('dec-to-mar uploads show about 25% completion and missing march-to-dec rang
 
 test('shows coverage from saved ranges returned by backend', async () => {
     const fetchMock = vi.spyOn(global, 'fetch').mockImplementation(async (input, init) => {
-        const url = typeof input === 'string' ? input : input.url;
+        const url =
+            typeof input === 'string'
+                ? input
+                : input instanceof Request
+                  ? input.url
+                  : input.toString();
 
         // Return saved ranges from backend
         if (url.includes('/api/uploads/ranges')) {
@@ -397,7 +394,12 @@ test('multi-file upload updates progress bar from saved ranges', async () => {
     };
 
     const fetchMock = vi.spyOn(global, 'fetch').mockImplementation(async input => {
-        const url = typeof input === 'string' ? input : input.url;
+        const url =
+            typeof input === 'string'
+                ? input
+                : input instanceof Request
+                  ? input.url
+                  : input.toString();
 
         if (url.includes('/api/uploads/ranges')) {
             const ranges = completedParses.map(id => rangesByUpload[id]).filter(Boolean);

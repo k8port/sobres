@@ -35,6 +35,10 @@ export const ___resetLastTransactionsBody = () => { lastTransactionsBody = null;
 
 // python backend handlers
 export const handlers = [
+    /* ******************** Auth *********************** */
+    http.get('/api/auth/me', () => {
+        return HttpResponse.json({ id: 'dev-user-1', name: 'Dev User' });
+    }),
     /* ******************** Envelopes *********************** */   
     /*  envelopes */
     http.get('/api/envelopes', () => {
@@ -93,17 +97,20 @@ export const handlers = [
 
         // enforce “payments only”
         if (transactions[idx].cat !== 'payments') {
-        return HttpResponse.json({ error: 'envelopeId allowed for payments only' }, { status: 409 });
+            return HttpResponse.json({ error: 'envelopeId allowed for payments only' }, { status: 409 });
         }
 
         transactions[idx] = { ...transactions[idx], envelopeId: next };
         return HttpResponse.json(transactions[idx]);
     }),
     // transactions endpoint
-    http.post(`${BACKEND_URL}/api/transactions`, async ({ request }) => {
+    http.post(`/api/transactions`, async ({ request }) => {
+        if (!request.headers.get('X-User-Id')) {
+            return HttpResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
         lastTransactionsBody = await request.json();
         const count = Array.isArray(lastTransactionsBody) ? lastTransactionsBody.length : 0;
-        return HttpResponse.json({ count }, { status: 200 });
+        return HttpResponse.json({ count }, { status: 201 });
     }),
     http.delete('/api/transactions/:id', ({ params }) => {
         const id = String(params.id);
