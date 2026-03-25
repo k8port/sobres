@@ -273,8 +273,6 @@ def auth_headers():
 cd py_backend && PYTHONPATH=. pytest -q
 ----
 
----
-
 == Phase 3 -- Backend: Split Draft vs Saved Ingestion (Green)
 
 [.lead]
@@ -414,7 +412,6 @@ cd py_backend && PYTHONPATH=. pytest -q
 
 Expected: Phase 1 backend tests are now green.
 
----
 
 == Phase 4 -- Frontend: Auth Provider + Draft/Save Split (Green)
 
