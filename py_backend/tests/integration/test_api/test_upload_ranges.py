@@ -28,7 +28,7 @@ def test_upload_persists_to_database_with_statement_range(client, db):
     # Upload a PDF
     pdf = io.BytesIO(b"%PDF-1.4 dummy")
     files = {"file": ("bank.pdf", pdf, "application/pdf")}
-    response = client.post("/api/upload", files=files)
+    response = client.post("/api/upload", files=files, headers={"X-User-Id": "dev-user-1"})
     assert response.status_code == 201
 
     upload_id = response.json()["id"]
