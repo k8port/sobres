@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.db.session import engine, Base
 from app.api.upload import router as upload_router
 from app.api.transactions import router as transactions_router
+from app.api.auth import router as auth_router
 
 #  Minimal FastAPI app configuration for MVP
 # to implement middleware (connection between backend and frontend)
@@ -37,3 +38,5 @@ async def read_root():
 app.include_router(upload_router, tags=["upload"])
 # to define route for transactions
 app.include_router(transactions_router, tags=["transactions"])
+# to define route for auth
+app.include_router(auth_router, tags=["auth"])

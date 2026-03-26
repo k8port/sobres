@@ -9,6 +9,12 @@ from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey, Enum as
 from sqlalchemy.orm import relationship
 from .session import Base
 
+
+class User(Base):
+    __tablename__ = "user"
+    id   = Column(String, primary_key=True)
+    name = Column(String, nullable=False)
+
 class CategoryEnum(Enum):
     FOOD = 1
     HOUSING = 2
@@ -36,6 +42,9 @@ class Transaction(Base):
     subcategory = Column(String, nullable=True)
     notes = Column(String, nullable=True)
     category_id = Column(Integer, ForeignKey("category.id"), nullable=True)
+    upload_id = Column(String, nullable=True)
+    envelope_id = Column(String, nullable=True)
+    user_id = Column(String, ForeignKey("user.id"), nullable=True, index=True)
 
 class Category(Base):
     __tablename__ = "category"
@@ -45,6 +54,7 @@ class Category(Base):
     description = Column(String, nullable=False)
     allocation_percentage = Column(Float, default=0.0)
     kind = Column(SQLEnum(CategoryEnum), nullable=False)
+    user_id = Column(String, ForeignKey("user.id"), nullable=True, index=True)
     envelope = relationship("Envelope", back_populates="category")
 
 
@@ -63,6 +73,7 @@ class Envelope(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     category_id = Column(Integer, ForeignKey("category.id"), nullable=False)
     balance = Column(Float, default=0.0)
+    user_id = Column(String, ForeignKey("user.id"), nullable=True, index=True)
 
     category = relationship("Category", back_populates="envelope")
 
@@ -75,3 +86,4 @@ class Upload(Base):
     received_at = Column(String, nullable=False)
     statement_begin = Column(Date, nullable=True)
     statement_end = Column(Date, nullable=True)
+    user_id = Column(String, ForeignKey("user.id"), nullable=True, index=True)

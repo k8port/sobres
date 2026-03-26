@@ -13,6 +13,7 @@ from app.core.transaction_parser import get_statement_rows, get_transactions
 from app.core.statement_extractor import extract_pdf_content, extract_statement_period
 from app.db.session import get_db
 from app.db.models import Upload
+from app.api.auth import get_current_user
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -43,6 +44,7 @@ async def upload_statement(
     statement: Optional[UploadFile] = File(None),
     file: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
 ) -> UploadOut:
     """
     Store uploaded PDF (as bytes) and return id + timestamp.
@@ -72,16 +74,18 @@ async def upload_statement(
         if stmt_period:
             stmt_begin, stmt_end = stmt_period
 
-    # Persist to database
-    db_upload = Upload(
-        id=upload_id,
-        filename=upload.filename,
-        received_at=received_at,
-        statement_begin=stmt_begin,
-        statement_end=stmt_end,
-    )
-    db.add(db_upload)
-    db.commit()
+    # Persist to database only for authenticated users
+    if current_user:
+        db_upload = Upload(
+            id=upload_id,
+            filename=upload.filename,
+            received_at=received_at,
+            statement_begin=stmt_begin,
+            statement_end=stmt_end,
+            user_id=current_user.id,
+        )
+        db.add(db_upload)
+        db.commit()
 
     # Keep in-memory store for PDF content (used during parsing)
     _UPLOAD_STORE[upload_id] = {
@@ -132,14 +136,18 @@ def parse_upload(uploadId: str, db: Session = Depends(get_db)) -> ParseOut:
 
 
 @router.get("/api/uploads/ranges", response_model=UploadRangesOut)
-def get_upload_ranges(db: Session = Depends(get_db)) -> UploadRangesOut:
+def get_upload_ranges(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> UploadRangesOut:
     """Return statement date ranges for all saved uploads that have ranges set."""
-    uploads = (
-        db.query(Upload)
-        .filter(Upload.statement_begin.isnot(None), Upload.statement_end.isnot(None))
-        .order_by(Upload.statement_begin)
-        .all()
+    query = db.query(Upload).filter(
+        Upload.statement_begin.isnot(None),
+        Upload.statement_end.isnot(None),
     )
+    if current_user:
+        query = query.filter(Upload.user_id == current_user.id)
+    uploads = query.order_by(Upload.statement_begin).all()
 
     ranges = [
         StatementRangeOut(

@@ -23,13 +23,18 @@ class TransactionBase(BaseModel):
     category_id: Optional[int] = None
 
 class TransactionCreate(TransactionBase):
-    pass
+    upload_id:   str | None = None
+    envelope_id: str | None = None
+    user_id:     str | None = None
 
-class TransactionUpdate(TransactionBase):
-    pass
+class TransactionUpdate(BaseModel):
+    envelope_id: str | None = None
 
 class Transaction(TransactionBase):
-    id: int
+    id:          int
+    upload_id:   str | None = None
+    envelope_id: str | None = None
+    user_id:     str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
