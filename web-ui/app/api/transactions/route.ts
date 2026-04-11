@@ -21,6 +21,22 @@ export async function GET(request: NextRequest) {
     }
 }
 
+export async function POST(request: NextRequest) {
+    try {
+        const body = await request.text();
+        const response = await fetch(`${BACKEND_URL}/api/transactions`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body,
+        });
+        const json = await response.json().catch(() => null);
+        return NextResponse.json(json, { status: response.status });
+    } catch (error) {
+        console.error('Proxy POST /api/transactions error:', error);
+        return NextResponse.json({ error: 'Failed to save transactions' }, { status: 500 });
+    }
+}
+
 export async function DELETE(request: NextRequest) {
     try {
         const id = request.nextUrl.pathname.split('/').pop();

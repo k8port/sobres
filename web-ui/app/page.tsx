@@ -3,10 +3,10 @@ import { deleteTransaction } from './api/transactions/service';
 import { useEffect, useState } from 'react';
 import { useSaveTransactions } from '@/app/lib/hooks/useSaveTransactions';
 import { useOnboardingFlag } from '@/app/lib/hooks/useOnboardingFlag';
+import { useAuth } from '@/app/lib/context/AuthContext';
 import { computeDateCoverage } from '@/app/lib/dateCoverage';
 import { useUploadAndParse } from '@/app/lib/hooks/useUploadAndParse';
 import { useEditableNotes } from '@/app/lib/hooks/useEditableNotes';
-import { setCachedRows } from '@/app/lib/transactionsCache';
 import { fetchSavedStatementRanges } from '@/app/api/uploads/service';
 import type { StatementRange } from '@/app/lib/statementCoverage';
 
@@ -22,6 +22,7 @@ export default function Home() {
         transactionCount: number;
     } | null>(null);
 
+    const { user } = useAuth();
     const { isOnboarding, setOnboardingFlag } = useOnboardingFlag();
     const { run, isUploading, uploadError, uploadResult, parseStatus, parseError, rows } =
         useUploadAndParse();
@@ -56,7 +57,7 @@ export default function Home() {
 
     const handleSave = async () => {
         const rowsWithNotes = withNotes();
-        await save(rowsWithNotes); // update useSaveTransactions to accept rowsWithNotes as optional override argument
+        await save(rowsWithNotes);
     };
 
     const handleUpload = async () => {
@@ -67,7 +68,6 @@ export default function Home() {
         setUploadSuccess(null);
         try {
             await run(files);
-            setOnboardingFlag(true);
             // Re-fetch saved ranges from backend now that uploads are persisted
             const ranges = await fetchSavedStatementRanges();
             setSavedRanges(ranges);
@@ -89,7 +89,6 @@ export default function Home() {
     };
 
     const coverage = computeDateCoverage([], savedRanges);
-    const navEnabled = coverage.complete;
 
     useEffect(() => {
         if (coverage.complete && isOnboarding) {
@@ -107,8 +106,10 @@ export default function Home() {
                 Bank Statement Upload
             </h2>
 
-            {navEnabled && <NavMenu enabled={navEnabled} />}
-            {isOnboarding && <OnboardingPrompt statementRanges={savedRanges} />}
+            <NavMenu enabled />
+            {user && !coverage.complete && isOnboarding && (
+                <OnboardingPrompt statementRanges={savedRanges} />
+            )}
 
             <form className="bg-white mt-6 p-8 shadow-md rounded space-y-4 w-full max-w-md">
                 <label htmlFor="file" className="block text-sm font-medium text-gray-700">
@@ -163,11 +164,10 @@ export default function Home() {
                     <p className="font-semibold">Upload Successful</p>
                     <p className="text-sm mt-2">
                         ✓ {uploadSuccess.statementCount} statement
-                        {uploadSuccess.statementCount !== 1 ? 's' : ''} uploaded to storage
+                        {uploadSuccess.statementCount !== 1 ? 's' : ''} uploaded
                     </p>
                     <p className="text-sm">
-                        ✓ {rows.length} transaction{rows.length !== 1 ? 's' : ''} parsed, persisted
-                        and ready
+                        ✓ {rows.length} transaction{rows.length !== 1 ? 's' : ''} ready to review
                     </p>
                 </div>
             )}

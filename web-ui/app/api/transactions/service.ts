@@ -3,7 +3,7 @@
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
 
 export async function saveTransactions(rows: Record<string, unknown>[] | unknown[]) {
-    const response = await fetch(`${BACKEND_URL}/api/transactions`,{
+    const response = await fetch(`/api/transactions`,{
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(rows)
