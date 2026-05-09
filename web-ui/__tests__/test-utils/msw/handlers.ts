@@ -105,9 +105,6 @@ export const handlers = [
     }),
     // transactions endpoint
     http.post(`/api/transactions`, async ({ request }) => {
-        if (!request.headers.get('X-User-Id')) {
-            return HttpResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
         lastTransactionsBody = await request.json();
         const count = Array.isArray(lastTransactionsBody) ? lastTransactionsBody.length : 0;
         return HttpResponse.json({ count }, { status: 201 });

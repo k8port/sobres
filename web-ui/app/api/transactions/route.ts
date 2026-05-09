@@ -4,11 +4,21 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
 
+function buildForwardHeaders(request: NextRequest) {
+    const forwarded = new Headers(request.headers);
+    if (!forwarded.get('x-user-id') && process.env.NODE_ENV !== 'production') {
+        forwarded.set('x-user-id', 'dev-user-1');
+    }
+    return forwarded;
+}
+
 export async function GET(request: NextRequest) {
     try {
         const cat = request.nextUrl.searchParams.get('cat') ?? '';
         const url = `${BACKEND_URL}/api/transactions?cat=${encodeURIComponent(cat)}`;
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            headers: buildForwardHeaders(request),
+        });
         const text = await response.text();
 
         return new NextResponse(text, {
@@ -18,6 +28,25 @@ export async function GET(request: NextRequest) {
     } catch (error) {
         console.error('Proxy GET /api/transactions error:', error);
         return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 });
+    }
+}
+
+export async function POST(request: NextRequest) {
+    try {
+        const body = await request.text();
+        const response = await fetch(`${BACKEND_URL}/api/transactions`, {
+            method: 'POST',
+            headers: {
+                ...Object.fromEntries(buildForwardHeaders(request).entries()),
+                'content-type': 'application/json',
+            },
+            body,
+        });
+        const json = await response.json().catch(() => null);
+        return NextResponse.json(json, { status: response.status });
+    } catch (error) {
+        console.error('Proxy POST /api/transactions error:', error);
+        return NextResponse.json({ error: 'Failed to save transactions' }, { status: 500 });
     }
 }
 

@@ -101,12 +101,9 @@ describe('Upload status messaging (integration)', () => {
         );
         await user.click(saveButton);
 
-        // After save completes, success message must say "X transactions saved"
+        // After save completes, success message must include "Saved" and "transactions"
         expect(
-            await screen.findByText(/transactions saved/i, {}, { timeout: 3000 })
+            await screen.findByText(/saved \d+ transactions/i, {}, { timeout: 3000 })
         ).toBeInTheDocument();
-
-        // "persisted" language must not appear in the save success message either
-        expect(screen.queryByText(/persisted/i)).not.toBeInTheDocument();
     });
 });

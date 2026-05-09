@@ -112,11 +112,12 @@ def parse_upload(uploadId: str, db: Session = Depends(get_db)) -> ParseOut:
         if not extracted:
             raise HTTPException(status_code=400, detail="Failed to extract text from PDF")
 
-        raw_rows = get_statement_rows(extracted["text"])
-        tx_items = get_transactions(raw_rows)
-
         # Extract statement period directly from PDF text (decoupled from transactions)
         stmt_period = extract_statement_period(extracted.get("text", ""))
+
+        raw_rows = get_statement_rows(extracted["text"])
+        tx_items = get_transactions(raw_rows, statement_period=stmt_period)
+
         if stmt_period:
             db_upload = db.query(Upload).filter(Upload.id == uploadId).first()
             if db_upload:

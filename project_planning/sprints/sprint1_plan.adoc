@@ -1,46 +1,39 @@
 = Sprint 1: Onboarding & Persistence
 
+[NOTE]
+====
+Canonical MVP behavior is defined in `project_planning/mvp/mvp_requirements_canonical.adoc`.
+Onboarding is out of MVP scope.
+====
+
 == Sprint Plan
 
-> **Goal:** Persist uploads and enforce historical-data onboarding.
+> **Goal:** Persist uploads and core transaction data.
 
 .User Stories
 ****
 [horizontal,labelwidth=30,itemwidth=70]
 **Persistence**:: Upload PDF save for each parsed `{date,description,amount,payee}` row in `transactions`.
-**Onboarding Status**:: User can see how many distinct months have been uploaded
-**Enforced Onboarding**:: Until ≥12 months are loaded, user is gated on a full-screen upload flow.
+**Auth-Scope Persistence**:: Anonymous uploads are draft-only; authenticated saves persist.
 ****
 
 .Backend Tasks
 ****
 . Define `Transaction` model and `transactions` table; ensure `Base.metadata.create_all()` runs on startup.
 . Update `/api/upload` to bulk-insert parsed rows into SQLite via SQLAlchemy.
-. Add `has_sufficient_history` flag on the user (simple boolean column or in-memory store).
-. Build `/api/status` endpoint:
-+
-[source,json]
-```
-{
-    "monthsLoaded": <int>,
-    "hasHistory": <bool>
-}
-```
-+
-. Write unit tests for upload → DB and `/api/status`.
+. Write unit/integration tests for upload → DB and user-scoped transactions.
 ****
 
 .Frontend Tasks
 ****
-1. Scaffold `/onboarding` page in Next.js.
-2. SWR-fetch `/api/status` and render progress (e.g. “8 of 12 months loaded”).
-3. Wire upload form into this page (FormData key `statement`).
-4. Redirect all routes to `/onboarding` if `hasHistory===false`.
-5. Write simple component tests (Jest/React Testing Library).
+1. Ensure upload UI supports one-to-many statement uploads.
+2. Ensure success/error messaging reflects draft vs authenticated save behavior.
+3. Ensure transactions page supports authenticated persistence flows.
+4. Write component/integration tests for upload and save behaviors.
 ****
 
 == Acceptance Criteria
 * Uploads persist in `transactions`.
-* `/api/status` accurately reflects loaded months.
-* New users cannot access any other page until `hasHistory===true`.
-* Onboarding page shows a working progress bar and upload button.
+* Anonymous uploads remain draft-only (no durable DB writes).
+* Authenticated uploads and transaction saves are user-scoped and durable.
+* Upload and transaction flows are validated by automated tests.

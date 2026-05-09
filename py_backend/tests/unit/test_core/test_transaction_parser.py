@@ -117,3 +117,20 @@ def test_get_transactions_infers_year_for_mmdd_using_future_rollover_rule():
 
     assert by_desc["Past"]["date"].year == today.year
     assert by_desc["Future"]["date"].year == today.year - 1
+
+
+def test_get_transactions_regression_december_from_january_statement_year_boundary():
+    raw_rows = [
+        {
+            "Date": "12/15",
+            "Description": "UTILITY BILL",
+            "Amount": "$100.00",
+            "Category": "Payment",
+        }
+    ]
+
+    txs = get_transactions(raw_rows, statement_period=(date(2024, 12, 20), date(2025, 1, 20)))
+
+    assert len(txs) == 1
+    # Jan 2025 statement rows in December should map to 2024, not 2025.
+    assert txs[0]["date"] == date(2024, 12, 15)

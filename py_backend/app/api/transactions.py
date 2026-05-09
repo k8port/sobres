@@ -9,7 +9,7 @@ Objective: Provide CRUD for transactions.
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import List
+from typing import List, cast
 import logging
 
 from app.db.session import get_db
@@ -148,11 +148,11 @@ def patch_transaction(
         .filter(Transaction.id == transaction_id, Transaction.user_id == current_user.id)
         .first()
     )
-    if not tx:
+    if tx is None:
         raise HTTPException(status_code=404, detail="Transaction not found")
-    if tx.category == "deposits":
+    if cast(str | None, tx.category) == "deposits":
         raise HTTPException(status_code=409, detail="Cannot assign envelope to a deposit")
-    tx.envelope_id = update.envelope_id
+    setattr(tx, "envelope_id", update.envelope_id)
     db.commit()
     db.refresh(tx)
     return tx
@@ -170,7 +170,7 @@ def delete_transaction(
         .filter(Transaction.id == transaction_id, Transaction.user_id == current_user.id)
         .first()
     )
-    if not tx:
+    if tx is None:
         raise HTTPException(status_code=404, detail="Transaction not found")
     db.delete(tx)
     db.commit()

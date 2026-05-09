@@ -5,6 +5,12 @@ K8 Portalatin <k8@k8port.io>
 :url-repo: https://github.com/k8port/sobres
 :table-caption: MVP
 
+[NOTE]
+====
+Canonical MVP behavior is defined in `project_planning/mvp/mvp_requirements_canonical.adoc`.
+If this sprint note conflicts, the canonical MVP doc takes precedence.
+====
+
 [IMPORTANT]
 ====
 **Sprint 0 Objective:** 
@@ -227,10 +233,18 @@ K8 Portalatin <k8@k8port.io>
 
 == New User Onboarding Flow
 
+[IMPORTANT]
+====
+Onboarding and historical coverage are post-MVP.
+
+Do not implement coverage calculations (including month counting and
+`has_sufficient_history`) in MVP delivery.
+====
+
 === Backend
 [unordered]
-* Flag for new user: `has_sufficient_history: bool`
-* On `/upload`, conunt distinct months in stored transactions:
+* Deferred to post-MVP.
+* Do not compute distinct-month coverage in MVP.
 
 ====
 [source,python]
@@ -243,11 +257,8 @@ if len(months) >= 12:
 
 === Frontend
 [unordered]
-* On user's *first* visit or if `has_sufficient_history` is `False`:
-** Redirect to full-screen "Upload Historical Statements" page
-** Display counter or progress bar for months remaining
-** All other app links disabled until sufficient history exists
-* Redirects to main dashboard once uploading is complete and user does not wish to upload more statements
+* Deferred to post-MVP.
+* No onboarding prompt/progress implementation required for MVP.
 
 
 == Dashboard UI
@@ -277,10 +288,9 @@ export default function EnvelopesPage() {
 
 == Sprint Plan
 [horizontal]
-**Sprint 1**:: *Onboarding + Persistence* [.small]#(1 week)#
+**Sprint 1**:: *Persistence Foundation* [.small]#(1 week)#
 * Configure database and tables
-* User upload of historical statements using `count` + `flag`
-* UI redirects to “Historical Statements Upload” and displays progress bar
+* User upload and parse statement workflows
 * Stores uploaded data into tables as before
 
 **Sprint 2**:: *Transactions List + Categorization* [.small]#(1 week)#
@@ -288,11 +298,12 @@ export default function EnvelopesPage() {
 * Implement simple rule-based engine for categories
 
 **Sprint 3**:: *Envelopes Dashboard* [.small]#(1 week)#
-* Compute historical % allocations once `has_sufficient_history` is `True`
+* Compute historical % allocations from persisted transaction history
 * Persist Category model with percentages and balances
 * Build `/envelopes` page showing % and balance cards
 
 **Sprint 4**:: *Bills & Reminders* [.small]#(1 week)#
+* Post-MVP roadmap work
 * CRUD bills + scheduler + UI at `/bills`
 * Daily job configured to update dashboard with upcoming due dates
 
@@ -302,4 +313,4 @@ export default function EnvelopesPage() {
 * [n/a] Create issues, milestones, and labels, and branches
 * [*] Update workflows for CI/CD and development
 * [*] Verify `docker-compose up` works
-* [ ] Spin up onboarding endpoint and prototype statement uploads
+* [ ] Prototype statement uploads

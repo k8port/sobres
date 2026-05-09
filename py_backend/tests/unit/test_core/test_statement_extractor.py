@@ -104,3 +104,9 @@ def test_extract_statement_period_returns_none_when_not_found():
 def test_extract_statement_period_empty_text():
     assert extract_statement_period("") is None
     assert extract_statement_period(None) is None
+
+
+def test_extract_statement_period_supports_spaced_label_format():
+    text = "STATEMENT PERIOD: Dec072024-Jan062025\nother content"
+    result = extract_statement_period(text)
+    assert result == (dtdate(2024, 12, 7), dtdate(2025, 1, 6))

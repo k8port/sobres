@@ -8,6 +8,16 @@ K8 Portalatin <k8@k8port.io>
 :url-repo: https://github.com/k8port/sobres
 :table-caption: Security & Compliance Strategy
 
+[IMPORTANT]
+====
+This document is historical context.
+
+For active MVP scope and behavior, use:
+
+* `project_planning/mvp/mvp_requirements_canonical.adoc`
+* `project_planning/mvp/intermim_strategy.adoc`
+====
+
 > _Sobres_ MVP is a budget tool for iOS that allows users to manage their finances by creating envelopes for different categories of spending, integrating with Plaid for real-time account data, and providing a simple UI for tracking income and expenses. Manual upload of account statements will also be supported.
 
 == Core Domain & Data Model

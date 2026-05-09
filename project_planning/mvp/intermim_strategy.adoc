@@ -6,7 +6,7 @@ v1.1, 2026-03-25
 :toclevels: 2
 
 [.lead]
-**Recommended path**: Stop treating onboarding as the gate, and stop treating pre-auth uploads as durable app data. The quickest, clean path to finish is to keep the current Next.js App Router and FastAPI structure, make anonymous upload/parse a disposable draft flow, add a minimal stub user boundary for saved data, and keep the database layer swap-ready to move from SQLite to MySQL once behavior is stable.
+**Recommended path**: Keep pre-auth uploads as disposable draft data, and keep authenticated persistence user-scoped. For current MVP, onboarding implementation is deferred and this document's onboarding phases are historical guidance.
 
 [IMPORTANT]
 .Decision Record
@@ -15,13 +15,20 @@ v1.1, 2026-03-25
 Anonymous uploads:: _temporary drafts only -- no DB writes until a user session exists_
 Auth scope:: _stub current-user for MVP; real provider is a later concern_
 Database:: _finish behavior on SQLite; make session config swap-ready for MySQL_
-Onboarding:: _not a gate -- convert to a post-auth progress checklist_
-Out of MVP:: _production auth, durable anonymous accounts, migrations framework_
+Onboarding:: _out of MVP scope (no onboarding coverage calculations in MVP)_
+Out of MVP:: _onboarding flows/coverage, bills & reminders, production auth, durable anonymous accounts, migrations framework_
 ====
 
 ---
 
 == Phase 0 -- Re-scope Onboarding (No Code)
+
+[NOTE]
+====
+Onboarding is out of current MVP scope.
+
+This and related onboarding phases are retained for post-MVP planning.
+====
 
 [.lead]
 **Goal**: Agree on product behavior before touching code. No implementation in this phase.
@@ -70,7 +77,7 @@ all tests should *fail* at first_
 .Tests to add (all must fail on first run)
 [source,text]
 ----
-- "onboarding prompt is visible after anonymous upload"
+- "onboarding prompt is NOT visible to anonymous users"
 - "onboarding prompt is NOT blocking -- nav links are reachable before onboarding completes"
 - "onboarding dismissal persists across remount when user is authenticated"
 - "onboarding progress reflects saved upload ranges from backend, not local state"
