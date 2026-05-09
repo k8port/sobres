@@ -1,0 +1,73 @@
+= SOBRES MVP Canonical Requirements
+K8 Portalatin <k8@k8port.io>
+:icons: font
+:toc: left
+:toclevels: 2
+
+[IMPORTANT]
+====
+This is the source of truth for MVP scope and behavior.
+
+If any older planning doc conflicts with this file, this file wins.
+====
+
+== Product Intent
+
+SOBRES MVP is a personal budgeting app centered on statement ingestion, transaction review, and envelope assignment.
+
+== Core MVP Contracts
+
+=== Ingestion Modes
+
+* Anonymous mode:
+** User can upload and parse transactions from a banking statement: from one to many statements at once.
+** Parsed rows are review-only drafts.
+** Parsed transaction rows must contain both a statementId and transactionId which, combined together, compose Transaction primary key (`{statementId, transactionId}`).
+** No durable DB writes for uploads/transactions.
+* Authenticated mode:
+** Upload metadata and transactions are persisted.
+** Transactions are scoped by user.
+
+=== Onboarding Behavior
+
+* Onboarding is not included in MVP scope.
+* Do not calculate historical coverage in MVP.
+* Any onboarding prompts, coverage progress, and related APIs are post-MVP.
+
+=== Transactions Contract
+
+* `GET /api/transactions` supports user-scoped retrieval and category filters (`all`, `payments`, `deposits`).
+* `POST /api/transactions` requires auth and bulk-saves scoped rows.
+* `PATCH /api/transactions/:id` supports envelope assignment for payment rows only (`409` for deposits).
+* `DELETE /api/transactions/:id` returns `204` on success.
+* `GET /api/transactions/:statementId` returns all transactions from a given statement, scoped by user.
+* `GET /api/transactions/:statementId/:transactionId` returns a specific transaction from a given statement, scoped by user.
+* `GET /api/transactions/uncategorized` returns all transactions without an envelope assignment, scoped by user.
+* `GET /api/transactions/:envelopeId` returns aggregated spend by category for the current month, scoped by user.
+
+
+=== Upload Contract
+
+* `POST /api/upload` accepts multipart uploads (`statement`, optional compatibility with `file`).
+* `POST /api/upload/parse` requires `uploadId` and returns parsed rows.
+
+=== Envelope Contract
+
+* `GET /api/envelopes` returns `{ categories: [...] }` for the current user.
+* `POST /api/envelopes` creates user-scoped envelope categories.
+
+== Non-Goals for MVP
+
+* Production auth provider integration (JWT/OAuth/NextAuth hardening).
+* Durable anonymous account model.
+* Plaid integration.
+* Onboarding flows and historical coverage calculations.
+* Bills/reminders implementation (CRUD, scheduler, reminders UI).
+* Bills/reminders automation in production.
+* Full migration framework rollout.
+
+== Quality Gates
+
+* Backend integration tests cover draft-vs-saved persistence split and user scoping.
+* Frontend integration tests cover upload/save messaging and authenticated persistence behavior.
+* API proxy routes are complete for all frontend service calls (including dynamic transaction routes).

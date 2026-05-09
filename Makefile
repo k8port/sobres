@@ -14,7 +14,7 @@ up:
 .PHONY: run-backend
 
 run-backend-local:
-	source ~/venvs/sobres/bin/activate && cd py_backend && DEV_RESET_DB=1 python main.py
+	source ~/venvs/sobres/bin/activate && cd py_backend && DEV_MODE=1 DEV_RESET_DB=1 python main.py
 
 run-backend-docker:
 	docker-compose up py_backend

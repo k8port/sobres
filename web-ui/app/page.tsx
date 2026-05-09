@@ -1,14 +1,14 @@
 'use client';
-import { deleteTransaction } from './api/transactions/service';
-import { useEffect, useState } from 'react';
-import { useSaveTransactions } from '@/app/lib/hooks/useSaveTransactions';
-import { useOnboardingFlag } from '@/app/lib/hooks/useOnboardingFlag';
+import { fetchSavedStatementRanges } from '@/app/api/uploads/service';
 import { useAuth } from '@/app/lib/context/AuthContext';
 import { computeDateCoverage } from '@/app/lib/dateCoverage';
-import { useUploadAndParse } from '@/app/lib/hooks/useUploadAndParse';
 import { useEditableNotes } from '@/app/lib/hooks/useEditableNotes';
-import { fetchSavedStatementRanges } from '@/app/api/uploads/service';
+import { useOnboardingFlag } from '@/app/lib/hooks/useOnboardingFlag';
+import { useSaveTransactions } from '@/app/lib/hooks/useSaveTransactions';
+import { useUploadAndParse } from '@/app/lib/hooks/useUploadAndParse';
 import type { StatementRange } from '@/app/lib/statementCoverage';
+import { useEffect, useState } from 'react';
+import { deleteTransaction } from './api/transactions/service';
 
 import Logo from '@/app/ui/Logo';
 import OnboardingPrompt from '@/app/ui/OnboardingPrompt';
@@ -21,6 +21,7 @@ export default function Home() {
         statementCount: number;
         transactionCount: number;
     } | null>(null);
+    const [autoPersisted, setAutoPersisted] = useState(false);
 
     const { user } = useAuth();
     const { isOnboarding, setOnboardingFlag } = useOnboardingFlag();
@@ -56,6 +57,7 @@ export default function Home() {
     };
 
     const handleSave = async () => {
+        setAutoPersisted(false);
         const rowsWithNotes = withNotes();
         await save(rowsWithNotes);
     };
@@ -66,19 +68,24 @@ export default function Home() {
             return;
         }
         setUploadSuccess(null);
+        setAutoPersisted(false);
         try {
-            await run(files);
+            const result = await run(files);
             // Re-fetch saved ranges from backend now that uploads are persisted
             const ranges = await fetchSavedStatementRanges();
             setSavedRanges(ranges);
             // Show success notification after parsing completes
             setUploadSuccess({
                 statementCount: files.length,
-                transactionCount: rows.length,
+                transactionCount: result.totalTransactions,
             });
+            setAutoPersisted(
+                result.totalTransactions > 0 && result.savedCount >= result.totalTransactions
+            );
         } catch (e) {
             // Error will be shown in uploadError state
             setUploadSuccess(null);
+            setAutoPersisted(false);
         }
     };
 
@@ -86,6 +93,7 @@ export default function Home() {
         const selected = Array.from(e.target.files ?? []);
         setFiles(selected);
         setUploadSuccess(null);
+        setAutoPersisted(false);
     };
 
     const coverage = computeDateCoverage([], savedRanges);
@@ -180,13 +188,22 @@ export default function Home() {
                                 type="button"
                                 role="button"
                                 onClick={handleSave}
-                                disabled={isSaving}
+                                disabled={isSaving || autoPersisted}
                                 className="bg-robineggblue text-rosewhite py-2 px-4 rounded cursor-pointer hover:bg-pacificblue disabled:opacity-50 disabled:cursor-none"
                             >
-                                {isSaving ? 'Updating...' : 'Update Transactions'}
+                                {isSaving
+                                    ? 'Updating...'
+                                    : autoPersisted
+                                      ? 'Already Saved'
+                                      : 'Update Transactions'}
                             </button>
                             {saveSuccess && (
                                 <p className="mt-2 text-sm text-screamingreen">{saveSuccess}</p>
+                            )}
+                            {autoPersisted && (
+                                <p className="mt-2 text-sm text-screamingreen">
+                                    Transactions were saved automatically during upload.
+                                </p>
                             )}
                             {saveError && (
                                 <div className="mt-2 bg-rosewhite text-angelsred p-3 rounded border border-lightcopperorange">

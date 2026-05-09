@@ -125,3 +125,48 @@ def test_upload_with_auth_creates_db_row(client, db):
     uid = response.json()['id']
     row = db.query(Upload).filter(Upload.id == uid).first()
     assert row is not None, "Authenticated upload MUST persist an Upload row"
+
+
+def test_upload_parse_save_persists_december_to_prior_year_across_statement_boundary(client):
+    """End-to-end: upload -> parse -> save should persist 12/xx as prior year when
+    StatementPeriod crosses Dec/Jan (e.g. Dec 2024 - Jan 2025).
+    """
+    from unittest.mock import patch
+
+    pdf = io.BytesIO(b'%PDF-1.4 dummy')
+    files = {'file': ("jan_2025.pdf", pdf, "application/pdf")}
+
+    uploaded = client.post('/api/upload', files=files, headers={"X-User-Id": "dev-user-1"})
+    assert uploaded.status_code == 201
+    uid = uploaded.json()['id']
+
+    mock_text = "KATECPORTALATIN StatementPeriod: Dec072024-Jan062025\nother content"
+    mock_rows = [
+        {
+            "Date": "12/15",
+            "Description": "UTILITY BILL",
+            "Amount": "$100.00",
+            "Payee": "Power Co",
+            "Category": "Payment",
+        }
+    ]
+
+    with patch('app.api.upload.extract_pdf_content', return_value={'text': mock_text}), \
+         patch('app.api.upload.get_statement_rows', return_value=mock_rows):
+        parsed = client.post('/api/upload/parse', params={'uploadId': uid})
+
+    assert parsed.status_code == 200
+    parsed_rows = parsed.json().get('rows', [])
+    assert len(parsed_rows) == 1
+    assert parsed_rows[0]['date'] == '2024-12-15'
+
+    saved = client.post('/api/transactions', json=parsed_rows, headers={"X-User-Id": "dev-user-1"})
+    assert saved.status_code == 200
+    assert saved.json().get('count') == 1
+
+    listed = client.get('/api/transactions', headers={"X-User-Id": "dev-user-1"})
+    assert listed.status_code == 200
+    rows = listed.json()
+    assert len(rows) == 1
+    assert rows[0]['description'] == 'UTILITY BILL'
+    assert rows[0]['date'] == '2024-12-15'

@@ -1,5 +1,12 @@
 = Sprint 4: Bills & Reminders
 
+[IMPORTANT]
+====
+Bills and reminders are post-MVP scope.
+
+This sprint plan is retained as roadmap/backlog, not MVP delivery scope.
+====
+
 == Sprint Plan
 > **Goal:** Model recurring bills and surface upcoming due-date reminders.
 
@@ -37,4 +44,4 @@
 * Daily reminder logic correctly identifies upcoming due dates.
 
 == Conclusion
-**Once Sprint 4 is done**, you&apos;ll have a full MVP: historical onboarding, transaction persistence, categorization, envelope budgeting, and basic bill reminders—ready for user testing and feedback!
+Sprint 4 items are roadmap extensions after MVP completion.

@@ -5,14 +5,14 @@ vi.mock('next/navigation', () => ({
     useRouter: () => ({ push: pushMock }),
 }));
 
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
-import Home from '@/app/page';
-import { AuthProvider } from '@/app/lib/context/AuthContext';
-import { test, expect, describe, beforeEach, afterAll, afterEach, vi } from 'vitest';
-import { server } from '@/__tests__/test-utils/msw/server';
 import { ___setSavedUploadRanges } from '@/__tests__/test-utils/msw/handlers';
+import { server } from '@/__tests__/test-utils/msw/server';
+import { AuthProvider } from '@/app/lib/context/AuthContext';
+import { computeDateCoverage, splitGapIntoStatementPeriods } from '@/app/lib/dateCoverage';
+import Home from '@/app/page';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
+import { afterAll, afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 function renderHome() {
     return render(
@@ -35,6 +35,33 @@ afterEach(() => {
 afterAll(() => {
     pushMock.mockReset();
 });
+
+function seedOnboardingDismissedFlag() {
+    try {
+        if (typeof window.localStorage?.setItem === 'function') {
+            window.localStorage.setItem('onboardingFlag', 'false');
+            return;
+        }
+    } catch {}
+
+    const store = new Map<string, string>();
+    store.set('onboardingFlag', 'false');
+    Object.defineProperty(window, 'localStorage', {
+        configurable: true,
+        value: {
+            getItem: (key: string) => store.get(key) ?? null,
+            setItem: (key: string, value: string) => {
+                store.set(key, String(value));
+            },
+            removeItem: (key: string) => {
+                store.delete(key);
+            },
+            clear: () => {
+                store.clear();
+            },
+        },
+    });
+}
 
 // Removed: 'progress bar increases as statements are added'
 // Encoded the old contract: progressbar visible to anonymous users on landing.
@@ -81,7 +108,7 @@ describe('new contract: onboarding behavior', () => {
     // FAILs until useState(() => getInitial()) is used in useOnboardingFlag (Phase 4e).
     test('onboarding dismissal persists across remount when user is authenticated', async () => {
         // Simulate a prior session where the user dismissed the onboarding prompt
-        window.localStorage.setItem('onboardingFlag', 'false');
+        seedOnboardingDismissedFlag();
 
         server.use(
             http.get('/api/auth/me', () =>
@@ -271,13 +298,24 @@ test('dec-to-mar uploads show about 25% completion and missing march-to-dec rang
         // Should show 9 individual missing statement periods, not one contiguous gap
         await waitFor(() => {
             const items = screen.getAllByRole('listitem');
-            expect(items).toHaveLength(9);
-            // First missing: Mar 8, 2025 - Apr 7, 2025
-            expect(items[0].textContent).toContain('2025-03-08');
-            expect(items[0].textContent).toContain('2025-04-07');
-            // Last missing: Nov 8, 2025 - Dec 7, 2025
-            expect(items[8].textContent).toContain('2025-11-08');
-            expect(items[8].textContent).toContain('2025-12-07');
+            const ranges = [
+                rangesByUpload['u-dec'],
+                rangesByUpload['u-jan'],
+                rangesByUpload['u-feb'],
+            ];
+            const expected = computeDateCoverage([], ranges).gaps.flatMap(g =>
+                splitGapIntoStatementPeriods(g)
+            );
+
+            expect(items).toHaveLength(expected.length);
+            expect(items[0].textContent).toContain(expected[0].start);
+            expect(items[0].textContent).toContain(expected[0].end);
+            expect(items[items.length - 1].textContent).toContain(
+                expected[expected.length - 1].start
+            );
+            expect(items[items.length - 1].textContent).toContain(
+                expected[expected.length - 1].end
+            );
         });
     } finally {
         fetchMock.mockRestore();

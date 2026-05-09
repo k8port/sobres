@@ -4,11 +4,21 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
 
+function buildForwardHeaders(request: NextRequest) {
+    const forwarded = new Headers(request.headers);
+    if (!forwarded.get('x-user-id') && process.env.NODE_ENV !== 'production') {
+        forwarded.set('x-user-id', 'dev-user-1');
+    }
+    return forwarded;
+}
+
 export async function GET(request: NextRequest) {
     try {
         const cat = request.nextUrl.searchParams.get('cat') ?? '';
         const url = `${BACKEND_URL}/api/transactions?cat=${encodeURIComponent(cat)}`;
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            headers: buildForwardHeaders(request),
+        });
         const text = await response.text();
 
         return new NextResponse(text, {
@@ -26,7 +36,10 @@ export async function POST(request: NextRequest) {
         const body = await request.text();
         const response = await fetch(`${BACKEND_URL}/api/transactions`, {
             method: 'POST',
-            headers: { 'content-type': 'application/json' },
+            headers: {
+                ...Object.fromEntries(buildForwardHeaders(request).entries()),
+                'content-type': 'application/json',
+            },
             body,
         });
         const json = await response.json().catch(() => null);

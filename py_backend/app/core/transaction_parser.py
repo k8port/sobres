@@ -1,7 +1,7 @@
 # py_backend/app/core/transaction_parser.py
 
-from typing import List, Dict, Any
-from datetime import datetime
+from typing import List, Dict, Any, Optional, Tuple
+from datetime import datetime, date
 import re
 import logging
 
@@ -71,7 +71,51 @@ def get_statement_rows(text: str) -> List[Dict[str, str]]:
             continue
     return rows
 
-def get_transactions(rows_raw: List[Dict[str, str]]) -> List[Dict[str, Any]]:
+def _infer_mmdd_date(
+    mmdd: str,
+    today: date,
+    statement_period: Optional[Tuple[date, date]] = None,
+) -> date:
+    month_str, day_str = mmdd.split("/")
+    month = int(month_str)
+    day = int(day_str)
+
+    if statement_period:
+        begin, end = statement_period
+        candidate_years = {begin.year, end.year}
+        in_range = []
+
+        for year in candidate_years:
+            try:
+                candidate = date(year, month, day)
+            except ValueError:
+                continue
+
+            if begin <= candidate <= end:
+                in_range.append(candidate)
+
+        if len(in_range) == 1:
+            return in_range[0]
+        if len(in_range) > 1:
+            return max(in_range)
+
+        # If the date is outside both statement years, anchor to end year and
+        # roll back if it lands after the statement end.
+        candidate = date(end.year, month, day)
+        if candidate > end:
+            candidate = candidate.replace(year=candidate.year - 1)
+        return candidate
+
+    candidate = date(today.year, month, day)
+    if candidate > today:
+        candidate = candidate.replace(year=candidate.year - 1)
+    return candidate
+
+
+def get_transactions(
+    rows_raw: List[Dict[str, str]],
+    statement_period: Optional[Tuple[date, date]] = None,
+) -> List[Dict[str, Any]]:
     """ Turn rows_raw (dicts of strings )into structured transactions:
         - `date`: datetime.date
         - `description`: str
@@ -100,11 +144,13 @@ def get_transactions(rows_raw: List[Dict[str, str]]) -> List[Dict[str, Any]]:
                 date_mod = datetime.strptime(date_str.strip(), "%m/%d/%Y").date()
                 transaction['date'] = date_mod
             except ValueError:
-                # For mm/dd rows without explicit year, map to current year unless
-                # that would place the transaction in the future, then roll back one year.
-                date_mod = datetime.strptime(f"{date_str.strip()}/{today.year}", "%m/%d/%Y").date()
-                if date_mod > today:
-                    date_mod = date_mod.replace(year=date_mod.year - 1)
+                # For mm/dd rows without explicit year, infer year from statement period
+                # when available; otherwise use today-based rollover fallback.
+                date_mod = _infer_mmdd_date(
+                    date_str.strip(),
+                    today=today,
+                    statement_period=statement_period,
+                )
                 transaction['date'] = date_mod
         except Exception as e:
             logger.error('Invalid date', date_str, e)

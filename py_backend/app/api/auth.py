@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, Header, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.db.models import User
@@ -15,7 +17,10 @@ def get_current_user(
 ) -> User | None:
     """MVP stub: X-User-Id header is the identity. Replace with JWT later."""
     if not x_user_id:
-        return None
+        if os.environ.get("DEV_MODE") == "1":
+            x_user_id = DEV_USER_ID
+        else:
+            return None
     user = db.query(User).filter(User.id == x_user_id).first()
     if not user:
         user = User(id=x_user_id, name=DEV_USER_NAME)

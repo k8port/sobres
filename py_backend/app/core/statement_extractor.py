@@ -126,7 +126,11 @@ def extract_statement_period(text: Optional[str]) -> Optional[Tuple[date, date]]
     if not text:
         return None
 
-    match = re.search(r'StatementPeriod:\s*([A-Za-z]{3}\d{2}\d{4})-([A-Za-z]{3}\d{2}\d{4})', text)
+    match = re.search(
+        r'Statement\s*Period:\s*([A-Za-z]{3}\d{2}\d{4})-([A-Za-z]{3}\d{2}\d{4})',
+        text,
+        flags=re.IGNORECASE,
+    )
     if not match:
         return None
 

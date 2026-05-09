@@ -4,6 +4,14 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
 
+function buildForwardHeaders(request: NextRequest) {
+    const forwarded = new Headers(request.headers);
+    if (!forwarded.get('x-user-id') && process.env.NODE_ENV !== 'production') {
+        forwarded.set('x-user-id', 'dev-user-1');
+    }
+    return forwarded;
+}
+
 export async function POST(request: NextRequest) {
     try {
         // test-only bypass: allows JSON body having base64 / placeholder
@@ -18,6 +26,7 @@ export async function POST(request: NextRequest) {
                 
                 const response = await fetch(`${BACKEND_URL}/api/upload/`, { 
                     method: 'POST',
+                    headers: buildForwardHeaders(request),
                     body: new FormData(),
                 });
                 const text = await response.text();
@@ -50,9 +59,23 @@ export async function POST(request: NextRequest) {
         const primary = `${BACKEND_URL}/api/upload`; // without trailing forward slash
         const secondary = `${BACKEND_URL}/api/upload/`; // with trailing forward slash
 
-        let response = await fetch(primary, { method: 'POST', body: formData, });
+        // Strip content-type so fetch auto-sets it with the correct multipart boundary
+        // for the newly-constructed FormData. Forwarding the browser's boundary causes
+        // a boundary mismatch and a 400 from python_multipart.
+        const forwardHeaders = buildForwardHeaders(request);
+        forwardHeaders.delete('content-type');
+
+        let response = await fetch(primary, {
+            method: 'POST',
+            headers: forwardHeaders,
+            body: formData,
+        });
         if (response.status === 418) {
-            response = await fetch(secondary, { method: 'POST', body: formData, });
+            response = await fetch(secondary, {
+                method: 'POST',
+                headers: forwardHeaders,
+                body: formData,
+            });
         }
 
         const text = await response.text();

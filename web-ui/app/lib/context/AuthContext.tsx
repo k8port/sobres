@@ -2,10 +2,16 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 
-interface AuthUser { id: string; name: string; }
-interface AuthContextValue { user: AuthUser | null; isLoadingAuth: boolean; }
+interface AuthUser {
+    id: string;
+    name: string;
+}
+interface AuthContextValue {
+    user: AuthUser | null;
+    isLoadingAuth: boolean;
+}
 
-const AuthContext = createContext<AuthContextValue>({ user: null, isLoadingAuth: true });
+const AuthContext = createContext<AuthContextValue>({ user: null, isLoadingAuth: false });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<AuthUser | null>(null);
@@ -13,15 +19,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         fetch('/api/auth/me')
-            .then(res => res.ok ? res.json() : null)
-            .then(data => { setUser(data); setLoading(false); })
-            .catch(() => { setUser(null); setLoading(false); });
+            .then(res => (res.ok ? res.json() : null))
+            .then(data => {
+                setUser(data);
+                setLoading(false);
+            })
+            .catch(() => {
+                setUser(null);
+                setLoading(false);
+            });
     }, []);
 
-    return (
-        <AuthContext.Provider value={{ user, isLoadingAuth }}>
-            {children}
-        </AuthContext.Provider>
-    );
+    return <AuthContext.Provider value={{ user, isLoadingAuth }}>{children}</AuthContext.Provider>;
 }
 export const useAuth = () => useContext(AuthContext);
