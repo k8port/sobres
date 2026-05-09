@@ -5,7 +5,7 @@ Model Entities: Transaction, Category, Envelope, Bill
 """
 from enum import Enum
 
-from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey, Enum as SQLEnum, UniqueConstraint
 from sqlalchemy.orm import relationship
 from .session import Base
 
@@ -32,8 +32,18 @@ def get_category_name(category_id):
 
 class Transaction(Base):
     __tablename__ = "transaction"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "statement_id",
+            "transaction_id",
+            name="uq_transaction_user_statement_txid",
+        ),
+    )
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    statement_id = Column(String, nullable=True, index=True)
+    transaction_id = Column(String, nullable=True, index=True)
     date = Column(Date, index=True, nullable=False)
     description = Column(String, index=True, nullable=False)
     amount = Column(Float, nullable=False)

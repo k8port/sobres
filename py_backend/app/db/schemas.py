@@ -13,6 +13,8 @@ from typing import Optional
 from datetime import date
 
 class TransactionBase(BaseModel):
+    statement_id: Optional[str] = None
+    transaction_id: Optional[str] = None
     date: date
     description: str
     amount: float

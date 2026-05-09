@@ -1,0 +1,38 @@
+= Transaction Identity Compatibility Plan (Issue #59)
+
+== Goal
+Align backend transaction identity to canonical composite key:
+
+- `statement_id`
+- `transaction_id`
+
+while preserving compatibility for existing integer-id records during transition.
+
+== Current Compatibility Rules
+- Legacy integer `id` remains in the data model and response payload.
+- Existing integer-id endpoints remain available:
+  - `GET /api/transactions/{transaction_id}`
+  - `PATCH /api/transactions/{transaction_id}`
+  - `DELETE /api/transactions/{transaction_id}`
+- New canonical endpoints are available:
+  - `GET /api/transactions/{statement_id}/{transaction_id}`
+  - `PATCH /api/transactions/{statement_id}/{transaction_id}`
+  - `DELETE /api/transactions/{statement_id}/{transaction_id}`
+
+== Write Path Rules
+- Bulk create accepts canonical identifiers when provided.
+- Deduplication prefers canonical key `(statement_id, transaction_id)` when present.
+- Legacy rows without canonical identifiers still dedupe by `(date, description, amount)` for backward compatibility.
+
+== Data Migration Approach
+1. Backfill canonical identifiers for legacy rows where source metadata is available.
+2. Update clients to call canonical endpoints first.
+3. Monitor usage of integer-id endpoints.
+4. Deprecate and later remove integer-id endpoints after client cutover.
+
+== Constraint
+A database unique constraint now enforces uniqueness for:
+
+- `(user_id, statement_id, transaction_id)`
+
+This applies to rows where canonical identifiers are populated.
