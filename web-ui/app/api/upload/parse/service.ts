@@ -1,13 +1,11 @@
-// app/api/upload/service.ts
-
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
+// app/api/upload/parse/service.ts
 
 export interface ParseUploadResult {
     rows: Array<Record<string, unknown>>;
 }
 
 export async function parseUploadById(uploadId: string): Promise<Response> {
-    return fetch(`${BACKEND_URL}/api/upload/parse?uploadId=${encodeURIComponent(uploadId)}`, {
+    return fetch(`/api/upload/parse?uploadId=${encodeURIComponent(uploadId)}`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ uploadId }),

@@ -1,7 +1,7 @@
 // web-ui/app/lib/hooks/useUploadAndParse.ts
-import { useUploadStatement } from '@/app/lib/hooks/useUploadStatement';
-import { useParseStatement } from '@/app/lib/hooks/useParseStatement';
 import { saveTransactions } from '@/app/api/transactions/service';
+import { useParseStatement } from '@/app/lib/hooks/useParseStatement';
+import { useUploadStatement } from '@/app/lib/hooks/useUploadStatement';
 
 type UploadLike = { id?: String | null };
 
@@ -25,28 +25,30 @@ export function useUploadAndParse() {
 
     const run = async (files: File | File[]): Promise<UploadAndParseResult> => {
         const list = Array.isArray(files) ? files : [files];
-        
+
         const result = await upload.fileUploadMany(list);
         const uploads = asList<UploadLike>(result as any).filter((u) => Boolean(u?.id));
+        const aggregatedRows: Record<string, unknown>[] = [];
 
         let successCount = 0;
         let failureCount = 0;
 
         for (const u of uploads) {
             try {
-                await parseHook.parse(String(u.id));
+                const parsedRows = await parseHook.parse(String(u.id));
+                aggregatedRows.push(...parsedRows);
                 successCount++;
             } catch (e) {
                 failureCount++;
             }
         }
 
-        const totalTransactions = parseHook.rows.length;
+        const totalTransactions = aggregatedRows.length;
 
         // Auto-persist parsed transactions to the database
         let savedCount = totalTransactions;
         try {
-            const result = await saveTransactions(parseHook.rows);
+            const result = await saveTransactions(aggregatedRows);
             savedCount = result?.count ?? totalTransactions;
         } catch {
             // Save failed — rows are still displayed for manual retry
@@ -58,7 +60,7 @@ export function useUploadAndParse() {
             savedCount,
             successCount,
             failureCount,
-            rows: parseHook.rows,
+            rows: aggregatedRows,
         };
     };
 

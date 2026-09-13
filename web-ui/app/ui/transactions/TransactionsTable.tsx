@@ -1,4 +1,3 @@
-import React from 'react';
 import type { SpendingCategory } from '@/app/lib/types';
 
 type Row = Record<string, unknown>;
@@ -14,6 +13,9 @@ export interface TransactionsTableProps {
     onEnvelopeChange?: (transId: string | number, envelopeId: string | null) => void;
     onDeleteTransaction?: (transId: string | number) => void | Promise<void>;
     onSaveRow?: (transId: string | number) => void | Promise<void>;
+    budgetCategories?: string[];
+    getBudgetCategory?: (row: Row, index: number) => string;
+    onBudgetCategoryChange?: (index: number, category: string) => void;
     showUploadIdColumn?: boolean;
     showCompositeKeyColumn?: boolean;
 }
@@ -28,6 +30,9 @@ export default function TransactionsTable({
     onEnvelopeChange,
     onDeleteTransaction,
     onSaveRow,
+    budgetCategories = [],
+    getBudgetCategory,
+    onBudgetCategoryChange,
     showUploadIdColumn = false,
     showCompositeKeyColumn = false,
 }: TransactionsTableProps) {
@@ -48,19 +53,18 @@ export default function TransactionsTable({
             if (k && k !== uploadIdKey) keySet.add(k);
         }
     }
-    console.log('rows', rows);
-
     const preferredOrder = ['id', 'date', 'payee', 'description', 'amount', 'cat', 'envelopeId'];
     const remaining = [...keySet].filter(k => !preferredOrder.includes(k)).sort();
 
     const baseKeys = [...preferredOrder.filter(k => keySet.has(k)), ...remaining];
-    console.log('base keys: ', baseKeys);
     const showUploadId = rows.some(r => {
         const id = getUploadKey(++keyCounter);
         const v = r[id];
         return v != null && String(r[id]).trim() !== '';
     });
     const hasPayments = rows.some(r => String(r.cat ?? '') === 'payments');
+    const showBudgetCategories =
+        budgetCategories.length > 0 && typeof onBudgetCategoryChange === 'function';
     const showActions = typeof onDeleteTransaction === 'function';
 
     return (
@@ -83,6 +87,10 @@ export default function TransactionsTable({
                             <th className="px-4 py-2 whitespace-nowrap border-b">compositeKey</th>
                         )}
 
+                        {showBudgetCategories && (
+                            <th className="px-4 py-2 text-xs border-b">Budget Category</th>
+                        )}
+
                         {hasPayments && (
                             <th className="px-4 py-2 text-xs border-b">
                                 Envelope Spending Category
@@ -100,7 +108,6 @@ export default function TransactionsTable({
                     {rows.map((row, i) => {
                         const isPayment = String(row.cat ?? '') === 'payments';
                         const rowId = row.id as string | number | undefined;
-                        console.log('---', row.Id);
                         const uploadId = row.uploadId ? String(row.uploadId) : '';
                         // Use composite key to ensure uniqueness across multiple uploads
                         const compositeKey =
@@ -109,8 +116,6 @@ export default function TransactionsTable({
                                     ? `${uploadId}-${String(rowId)}`
                                     : String(rowId)
                                 : String(i);
-
-                        console.log('compositeKey', compositeKey);
 
                         return (
                             <tr key={compositeKey} className="even:bg-lavendargray">
@@ -137,6 +142,30 @@ export default function TransactionsTable({
                                     </td>
                                 )}
 
+                                {showBudgetCategories && (
+                                    <td className="px-4 py-2 whitespace-nowrap border-b">
+                                        <select
+                                            aria-label={`budget category row ${i + 1}`}
+                                            className="border rounded p-1 text-sm"
+                                            disabled={isSaving}
+                                            value={getBudgetCategory?.(row, i) ?? ''}
+                                            onChange={e =>
+                                                onBudgetCategoryChange?.(i, e.target.value)
+                                            }
+                                        >
+                                            <option value="">Uncategorized</option>
+                                            {budgetCategories.map(category => (
+                                                <option
+                                                    key={`${compositeKey}-${category}`}
+                                                    value={category}
+                                                >
+                                                    {category}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </td>
+                                )}
+
                                 {hasPayments && (
                                     <td className="px-4 py-2 whitespace-nowrap border-b">
                                         {isPayment ? (
@@ -144,7 +173,11 @@ export default function TransactionsTable({
                                                 aria-label="Spending Category"
                                                 className="border rounded p-1 text-sm"
                                                 disabled={isSaving}
-                                                value={rowId != null ? (envelopeByTransId[rowId] ?? '') : ''}
+                                                value={
+                                                    rowId != null
+                                                        ? (envelopeByTransId[rowId] ?? '')
+                                                        : ''
+                                                }
                                                 onChange={e =>
                                                     onEnvelopeChange?.(
                                                         rowId as string | number,
@@ -194,7 +227,9 @@ export default function TransactionsTable({
                                         placeholder="Jot note..."
                                         className="w-56 border rounded p-1 text-sm"
                                         value={rowId != null ? (notesById[rowId] ?? '') : ''}
-                                        onChange={e => rowId != null && onNotesChange(rowId, e.target.value)}
+                                        onChange={e =>
+                                            rowId != null && onNotesChange(rowId, e.target.value)
+                                        }
                                         disabled={isSaving}
                                     />
                                 </td>
