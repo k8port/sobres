@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.db.session import engine, Base
+from app.db.session import engine, Base, ensure_legacy_schema_compatibility
 from app.api.upload import router as upload_router
 from app.api.transactions import router as transactions_router
 from app.api.auth import router as auth_router
@@ -19,6 +19,7 @@ if os.environ.get("DEV_RESET_DB") == "1":
 
 # to Create budget.db with tables
 Base.metadata.create_all(bind=engine)
+ensure_legacy_schema_compatibility()
 
 # to configure middleware
 app.add_middleware(

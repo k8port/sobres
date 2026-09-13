@@ -1,7 +1,7 @@
 // app/lib/hooks/useParseStatement.ts
 
-import { useCallback, useMemo, useRef, useState } from 'react';
 import { parseUploadById } from '@/app/api/upload/parse/service';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 type Status = 'idle' | 'parsing' | 'success' | 'error';
 
@@ -20,7 +20,7 @@ export function useParseStatement(options: UseParseStatementOptions = {}) {
 
     const canParse = useMemo(() => status !== 'parsing', [status]);
 
-    const parse = useCallback(async (uploadId: string) => {
+    const parse = useCallback(async (uploadId: string): Promise<Record<string, unknown>[]> => {
         if (!uploadId) {
             setError('No uploadId');
             setStatus('error');
@@ -29,7 +29,7 @@ export function useParseStatement(options: UseParseStatementOptions = {}) {
 
         // Deduplication: skip if already parsed successfully
         if (dedupe && parsedUploadIds.current.has(uploadId)) {
-            return;
+            return [];
         }
 
         setStatus('parsing');
@@ -83,6 +83,7 @@ export function useParseStatement(options: UseParseStatementOptions = {}) {
             setParseResults(prev => [...prev, { uploadId, count: parsedRows.length, processedAt: new Date().toLocaleTimeString() }]);
             setStatus('success');
             parsedUploadIds.current.add(uploadId);
+            return rowsWithUploadId;
         } catch (e: any) {
             const errMsg = e instanceof Error ? e.message : 'Invalid JSON from parse endpoint';
             setStatus('error');

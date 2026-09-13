@@ -74,6 +74,28 @@ def get_transaction(
     except Exception as e:
         logger.exception(f"Error fetching transaction {transaction_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@router.get("/api/transactions/{statement_id}/{transaction_id}", response_model=TransactionSchema)
+def get_transaction_by_composite_id(
+    statement_id: str,
+    transaction_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_user),
+):
+    """Get a specific transaction by canonical composite identifier."""
+    tx = (
+        db.query(Transaction)
+        .filter(
+            Transaction.statement_id == statement_id,
+            Transaction.transaction_id == transaction_id,
+            Transaction.user_id == current_user.id,
+        )
+        .first()
+    )
+    if tx is None:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    return tx
     
 class SaveOut(BaseModel):
     count: int
@@ -93,7 +115,18 @@ def create_transactions(
         if not transactions:
             return SaveOut(count=0)
 
-        # Deduplicate: skip transactions that already exist (same date + description + amount + user)
+        # Deduplicate by canonical composite key when provided; fallback to legacy tuple.
+        existing_composite = (
+            db.query(Transaction.statement_id, Transaction.transaction_id)
+            .filter(
+                Transaction.user_id == current_user.id,
+                Transaction.statement_id.isnot(None),
+                Transaction.transaction_id.isnot(None),
+            )
+            .all()
+        )
+        existing_composite_keys = {(row.statement_id, row.transaction_id) for row in existing_composite}
+
         existing = (
             db.query(Transaction.date, Transaction.description, Transaction.amount)
             .filter(Transaction.user_id == current_user.id)
@@ -101,16 +134,29 @@ def create_transactions(
         )
         existing_keys = {(row.date, row.description, row.amount) for row in existing}
 
-        new_txs = [
-            tx for tx in transactions
-            if (tx.date, tx.description, tx.amount) not in existing_keys
-        ]
+        new_txs: list[TransactionCreate] = []
+        for tx in transactions:
+            if tx.statement_id and tx.transaction_id:
+                composite_key = (tx.statement_id, tx.transaction_id)
+                if composite_key in existing_composite_keys:
+                    continue
+                existing_composite_keys.add(composite_key)
+                new_txs.append(tx)
+                continue
+
+            legacy_key = (tx.date, tx.description, tx.amount)
+            if legacy_key in existing_keys:
+                continue
+            existing_keys.add(legacy_key)
+            new_txs.append(tx)
 
         if not new_txs:
             return SaveOut(count=0)
 
         db_objects = [
             Transaction(
+                statement_id=tx.statement_id,
+                transaction_id=tx.transaction_id,
                 date=tx.date,
                 description=tx.description,
                 amount=tx.amount,
@@ -158,6 +204,34 @@ def patch_transaction(
     return tx
 
 
+@router.patch("/api/transactions/{statement_id}/{transaction_id}", response_model=TransactionSchema)
+def patch_transaction_by_composite_id(
+    statement_id: str,
+    transaction_id: str,
+    update: TransactionUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_user),
+):
+    """Assign envelope by canonical composite transaction identifier."""
+    tx = (
+        db.query(Transaction)
+        .filter(
+            Transaction.statement_id == statement_id,
+            Transaction.transaction_id == transaction_id,
+            Transaction.user_id == current_user.id,
+        )
+        .first()
+    )
+    if tx is None:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    if cast(str | None, tx.category) == "deposits":
+        raise HTTPException(status_code=409, detail="Cannot assign envelope to a deposit")
+    setattr(tx, "envelope_id", update.envelope_id)
+    db.commit()
+    db.refresh(tx)
+    return tx
+
+
 @router.delete("/api/transactions/{transaction_id}", status_code=204)
 def delete_transaction(
     transaction_id: int,
@@ -168,6 +242,29 @@ def delete_transaction(
     tx = (
         db.query(Transaction)
         .filter(Transaction.id == transaction_id, Transaction.user_id == current_user.id)
+        .first()
+    )
+    if tx is None:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    db.delete(tx)
+    db.commit()
+
+
+@router.delete("/api/transactions/{statement_id}/{transaction_id}", status_code=204)
+def delete_transaction_by_composite_id(
+    statement_id: str,
+    transaction_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_user),
+):
+    """Delete a transaction by canonical composite identifier."""
+    tx = (
+        db.query(Transaction)
+        .filter(
+            Transaction.statement_id == statement_id,
+            Transaction.transaction_id == transaction_id,
+            Transaction.user_id == current_user.id,
+        )
         .first()
     )
     if tx is None:

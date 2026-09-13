@@ -243,3 +243,86 @@ def test_delete_transaction_returns_204(client, db):
     # Verify row is gone
     row = db.query(TxModel).filter(TxModel.id == tx_id).first()
     assert row is None
+
+
+def test_transactions_composite_identity_lifecycle(client):
+    """Composite-key endpoints should support get/patch/delete by statement_id + transaction_id."""
+    payload = [
+        {
+            "statement_id": "stmt-2024-01",
+            "transaction_id": "tx-0001",
+            "date": "2024-01-03",
+            "description": "Composite Transaction",
+            "amount": -25.00,
+            "payee": "Store",
+            "category": "payments",
+        }
+    ]
+
+    create_resp = client.post("/api/transactions", json=payload, headers=AUTH)
+    assert create_resp.status_code == 200
+    assert create_resp.json()["count"] == 1
+
+    get_resp = client.get("/api/transactions/stmt-2024-01/tx-0001", headers=AUTH)
+    assert get_resp.status_code == 200
+    body = get_resp.json()
+    assert body["statement_id"] == "stmt-2024-01"
+    assert body["transaction_id"] == "tx-0001"
+
+    patch_resp = client.patch(
+        "/api/transactions/stmt-2024-01/tx-0001",
+        json={"envelope_id": "env-77"},
+        headers=AUTH,
+    )
+    assert patch_resp.status_code == 200
+    assert patch_resp.json()["envelope_id"] == "env-77"
+
+    delete_resp = client.delete("/api/transactions/stmt-2024-01/tx-0001", headers=AUTH)
+    assert delete_resp.status_code == 204
+
+    missing_resp = client.get("/api/transactions/stmt-2024-01/tx-0001", headers=AUTH)
+    assert missing_resp.status_code == 404
+
+
+def test_create_transactions_dedupes_by_composite_identity(client):
+    """Composite identity must be the primary dedupe key when present."""
+    initial = [
+        {
+            "statement_id": "stmt-a",
+            "transaction_id": "tx-1",
+            "date": "2024-02-01",
+            "description": "Coffee",
+            "amount": -5.25,
+        },
+        {
+            "statement_id": "stmt-a",
+            "transaction_id": "tx-2",
+            "date": "2024-02-01",
+            "description": "Coffee",
+            "amount": -5.25,
+        },
+    ]
+
+    resp1 = client.post("/api/transactions", json=initial, headers=AUTH)
+    assert resp1.status_code == 200
+    assert resp1.json()["count"] == 2
+
+    duplicate_composite = [
+        {
+            "statement_id": "stmt-a",
+            "transaction_id": "tx-1",
+            "date": "2024-02-01",
+            "description": "Coffee",
+            "amount": -5.25,
+        }
+    ]
+    resp2 = client.post("/api/transactions", json=duplicate_composite, headers=AUTH)
+    assert resp2.status_code == 200
+    assert resp2.json()["count"] == 0
+
+    all_rows = client.get("/api/transactions", headers=AUTH)
+    assert all_rows.status_code == 200
+    data = all_rows.json()
+    assert len(data) == 2
+    ids = {(row["statement_id"], row["transaction_id"]) for row in data}
+    assert ids == {("stmt-a", "tx-1"), ("stmt-a", "tx-2")}
